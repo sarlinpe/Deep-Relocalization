@@ -112,7 +112,8 @@ class BaseModel(metaclass=ABCMeta):
         assert self.datasets or (data_shape is not None), 'Incompatibiity in data shape.'
         assert n_gpus > 0, 'TODO: CPU-only training is currently not supported.'
 
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
+        # with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
+        with tf.variable_scope('', reuse=tf.AUTO_REUSE):
             self._build_graph()
 
     def _gpu_tower(self, data, mode):
