@@ -22,7 +22,7 @@ class BaseModel(metaclass=ABCMeta):
             network and the values are the associated shapes. Only required if `data` is
             empty or `None`.
         config: A dictionary containing the configuration parameters.
-            Entries `"batch_size"` and `"learning_rate"` are required.
+            Entries `"batch_size"` and `"learning_rate"` are required if `data`is given.
 
     Models should inherit from this class and implement the following methods:
         `_model`, `_loss`, and `_metrics`.
@@ -104,7 +104,9 @@ class BaseModel(metaclass=ABCMeta):
         self.config = getattr(self, 'default_config', {})
         self.config.update(config)
 
-        required = self.required_baseconfig + getattr(self, 'required_config_keys', [])
+        required = getattr(self, 'required_config_keys', [])
+        if self.datasets:
+            required += self.required_baseconfig
         for r in required:
             assert r in self.config, 'Required configuration entry: \'{}\''.format(r)
         assert set(self.datasets) <= self.dataset_names, \

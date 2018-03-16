@@ -1,0 +1,6 @@
+data:
+    seq: '2013-04-05' # '2012-01-08'
+    camera: 4
+model:
+    name: 'pooling_net'
+weights: 'resnet_v1_50/resnet_v1_50.ckpt'
