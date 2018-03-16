@@ -287,7 +287,7 @@ class BaseModel(metaclass=ABCMeta):
                     train_writer.add_summary(metrics_summaries, i)
         tf.logging.info('Training finished')
 
-    def predict(self, data, keys='pred', batch=False):
+    def predict(self, data, keys='*', batch=False):
         assert set(data.keys()) >= set(self.input_spec.keys())
         if isinstance(keys, str):
             if keys == '*':
@@ -339,8 +339,8 @@ class BaseModel(metaclass=ABCMeta):
         metrics = {m: np.nanmean(metrics[m], axis=0) for m in metrics}
         return metrics
 
-    def load(self, checkpoint_path, last=True):
-        if last:
+    def load(self, checkpoint_path):
+        if tf.gfile.IsDirectory(checkpoint_path):
             checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
             if checkpoint_path is None:
                 raise ValueError('Checkpoint directory is empty.')
