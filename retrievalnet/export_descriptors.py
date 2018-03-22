@@ -10,32 +10,16 @@ from retrievalnet.models import get_model
 from retrievalnet.settings import EXPER_PATH, DATA_PATH
 from retrievalnet.datasets.utils.nclt_undistort import Undistort
 
-if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config', type=str)
-    parser.add_argument('export_name', type=str)
-    args = parser.parse_args()
-
-    export_name = args.export_name
-    with open(args.config, 'r') as f:
-        config = yaml.load(f)
-    seq = config['data']['seq']
-    cam = config['data']['camera']
-
+def get_seq_images(seq, camera):
     root = osp.join(DATA_PATH, 'datasets/nclt')
-    im_root = osp.join(root, '{}/lb3/Cam{}/'.format(seq, cam))
-    dumap_file = osp.join(root, 'undistort_maps/U2D_Cam{}_1616X1232.txt'.format(cam))
+    im_root = osp.join(root, '{}/lb3/Cam{}/'.format(seq, camera))
+    dumap_file = osp.join(root, 'undistort_maps/U2D_Cam{}_1616X1232.txt'.format(camera))
     im_poses = np.loadtxt(osp.join(root, 'pose_{}.csv'.format(seq)),
-                          dtype={'names': ('time', 'pose_x', 'pose_y'),
-                                 'formats': (np.int, np.float, np.float)},
+                          dtype={'names': ('time', 'pose_x', 'pose_y', 'pose_angle'),
+                                 'formats': (np.int, np.float, np.float, np.float)},
                           delimiter=',', skiprows=1)
     timestamps = im_poses['time']
-
-    output_dir = osp.join(EXPER_PATH,
-                          'outputs/{}/{}/'.format(export_name, seq))
-    if not osp.exists(output_dir):
-        os.makedirs(output_dir)
 
     # Remove distortion mask
     d2u = Undistort(dumap_file)
@@ -49,12 +33,38 @@ if __name__ == '__main__':
             im = d2u.undistort(im)[y_min:y_max, x_min:x_max, ...]
         return np.rot90(im, k=3)
 
+    for t in tqdm(timestamps):
+        im = imread(str(t), undis=False)
+        yield (t, im)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config', type=str)
+    parser.add_argument('export_name', type=str)
+    args = parser.parse_args()
+
+    export_name = args.export_name
+    with open(args.config, 'r') as f:
+        config = yaml.load(f)
+    seqs = config['data']['seqs']
+    camera = config['data']['camera']
+
+    if not isinstance(seqs, list):
+        seqs = [seqs]
+
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, 3]}, **config['model']) as net:
         net.load(osp.join(DATA_PATH, 'weights', config['weights']))
 
-        for t in tqdm(timestamps):
-            im = imread(str(t), undis=False)
-            descriptor = net.predict({'image': im}, keys='descriptor')
-            filepath = osp.join(output_dir, '{}.npz'.format(t))
-            np.savez_compressed(filepath, descriptor=descriptor)
+        for seq in tqdm(seqs):
+            output_dir = osp.join(EXPER_PATH, 'outputs/{}/{}/'.format(export_name, seq))
+            if not osp.exists(output_dir):
+                os.makedirs(output_dir)
+
+            seq_data = get_seq_images(seq, camera)
+            for timestamp, im in seq_data:
+                descriptor = net.predict({'image': im}, keys='descriptor')
+                filepath = osp.join(output_dir, '{}.npz'.format(timestamp))
+                np.savez_compressed(filepath, descriptor=descriptor)
