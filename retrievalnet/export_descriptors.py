@@ -11,7 +11,7 @@ from retrievalnet.settings import EXPER_PATH, DATA_PATH
 from retrievalnet.datasets.utils.nclt_undistort import Undistort
 
 
-def get_seq_images(seq, camera):
+def get_seq_images(seq, camera, undistort):
     root = osp.join(DATA_PATH, 'datasets/nclt')
     im_root = osp.join(root, '{}/lb3/Cam{}/'.format(seq, camera))
     dumap_file = osp.join(root, 'undistort_maps/U2D_Cam{}_1616X1232.txt'.format(camera))
@@ -34,7 +34,7 @@ def get_seq_images(seq, camera):
         return np.rot90(im, k=3)
 
     for t in tqdm(timestamps):
-        im = imread(str(t), undis=False)
+        im = imread(str(t), undis=undistort)
         yield (t, im)
 
 
@@ -50,6 +50,7 @@ if __name__ == '__main__':
         config = yaml.load(f)
     seqs = config['data']['seqs']
     camera = config['data']['camera']
+    undistort = config['data'].get('undistort', False)
 
     if not isinstance(seqs, list):
         seqs = [seqs]
@@ -63,7 +64,7 @@ if __name__ == '__main__':
             if not osp.exists(output_dir):
                 os.makedirs(output_dir)
 
-            seq_data = get_seq_images(seq, camera)
+            seq_data = get_seq_images(seq, camera, undistort)
             for timestamp, im in seq_data:
                 descriptor = net.predict({'image': im}, keys='descriptor')
                 filepath = osp.join(output_dir, '{}.npz'.format(timestamp))
