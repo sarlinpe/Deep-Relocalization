@@ -111,8 +111,10 @@ class BaseModel(metaclass=ABCMeta):
             assert r in self.config, 'Required configuration entry: \'{}\''.format(r)
         assert set(self.datasets) <= self.dataset_names, \
             'Unknown dataset name: {}'.format(set(self.datasets)-self.dataset_names)
-        assert self.datasets or (data_shape is not None), 'Incompatibiity in data shape.'
         assert n_gpus > 0, 'TODO: CPU-only training is currently not supported.'
+
+        if data_shape is None:
+            self.data_shape = {i: s['shape'] for i, s in self.input_spec.items()}
 
         # with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
         with tf.variable_scope('', reuse=tf.AUTO_REUSE):
@@ -201,7 +203,8 @@ class BaseModel(metaclass=ABCMeta):
     def _pred_graph(self, data):
         with tf.name_scope('pred'):
             with tf.device('/gpu:0'):
-                self.pred_out = self._model(data, Mode.PRED, **self.config)
+                pred_out = self._model(data, Mode.PRED, **self.config)
+        self.pred_out = {n: tf.identity(p, name=n) for n, p in pred_out.items()}
 
     def _build_graph(self):
         # Training and evaluation network, if tf datasets provided
@@ -244,7 +247,7 @@ class BaseModel(metaclass=ABCMeta):
             self.summaries = tf.summary.merge_all()
 
         # Prediction network with feed_dict
-        self.pred_in = {i: tf.placeholder(spec['type'], shape=self.data_shape[i])
+        self.pred_in = {i: tf.placeholder(spec['type'], shape=self.data_shape[i], name=i)
                         for i, spec in self.input_spec.items()}
         self._pred_graph(self.pred_in)
 
@@ -263,12 +266,13 @@ class BaseModel(metaclass=ABCMeta):
                        tf.local_variables_initializer()])
         with tf.device('/cpu:0'):
             self.saver = tf.train.Saver(save_relative_paths=True)
-        self.graph.finalize()
 
     def train(self, iterations, validation_interval=100, output_dir=None):
         assert 'training' in self.datasets, 'Training dataset is required.'
         if output_dir is not None:
             train_writer = tf.summary.FileWriter(output_dir)
+        if not self.graph.finalized:
+            self.graph.finalize()
 
         tf.logging.info('Start training')
         for i in range(iterations):
