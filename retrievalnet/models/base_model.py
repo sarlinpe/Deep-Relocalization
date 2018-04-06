@@ -247,8 +247,8 @@ class BaseModel(metaclass=ABCMeta):
             self.summaries = tf.summary.merge_all()
 
         # Prediction network with feed_dict
-        self.pred_in = {i: tf.placeholder(spec['type'], shape=self.data_shape[i], name=i)
-                        for i, spec in self.input_spec.items()}
+        self.pred_in = {i: tf.placeholder(self.input_spec[i]['type'], shape=s, name=i)
+                        for i, s in self.data_shape.items()}
         self._pred_graph(self.pred_in)
 
         # Start session

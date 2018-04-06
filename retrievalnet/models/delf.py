@@ -11,7 +11,7 @@ def normalize_image(image, pixel_value_offset=128.0, pixel_value_scale=128.0):
 
 class Delf(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 3], 'type': tf.float32}
+            'image': {'shape': [None, None, None, None], 'type': tf.float32}
     }
     required_config_keys = []
     default_config = {
@@ -21,7 +21,10 @@ class Delf(BaseModel):
     }
 
     def _model(self, inputs, mode, **config):
-        image = normalize_image(inputs['image'])
+        image = inputs['image']
+        if image.shape[-1] == 1:
+            image = tf.tile(image, [1, 1, 1, 3])
+        image = normalize_image(image)
 
         with slim.arg_scope(resnet.resnet_arg_scope()):
             _, encoder = resnet.resnet_v1_50(image,

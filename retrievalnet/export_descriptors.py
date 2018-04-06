@@ -1,41 +1,16 @@
 import numpy as np
-import cv2
-import os
 import argparse
 import yaml
-from os import path as osp
+import logging
+from pathlib import Path
 from tqdm import tqdm
 
-from retrievalnet.models import get_model
-from retrievalnet.settings import EXPER_PATH, DATA_PATH
-from retrievalnet.datasets.utils.nclt_undistort import Undistort
-
-
-def get_seq_images(seq, camera, undistort):
-    root = osp.join(DATA_PATH, 'datasets/nclt')
-    im_root = osp.join(root, '{}/lb3/Cam{}/'.format(seq, camera))
-    dumap_file = osp.join(root, 'undistort_maps/U2D_Cam{}_1616X1232.txt'.format(camera))
-    im_poses = np.loadtxt(osp.join(root, 'pose_{}.csv'.format(seq)),
-                          dtype={'names': ('time', 'pose_x', 'pose_y', 'pose_angle'),
-                                 'formats': (np.int, np.float, np.float, np.float)},
-                          delimiter=',', skiprows=1)
-    timestamps = im_poses['time']
-
-    # Remove distortion mask
-    d2u = Undistort(dumap_file)
-    h, w = d2u.mask.shape
-    x_min, x_max = [f(np.where(d2u.mask[int(h/2), :])[0]) for f in [np.min, np.max]]
-    y_min, y_max = [f(np.where(d2u.mask[:, int(w/2)])[0]) for f in [np.min, np.max]]
-
-    def imread(name, undis=True):
-        im = cv2.imread(osp.join(im_root, '{}.tiff'.format(name)))
-        if undis:
-            im = d2u.undistort(im)[y_min:y_max, x_min:x_max, ...]
-        return np.rot90(im, k=3)
-
-    for t in tqdm(timestamps):
-        im = imread(str(t), undis=undistort)
-        yield (t, im)
+logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
+                    datefmt='%m/%d/%Y %H:%M:%S',
+                    level=logging.INFO)
+from retrievalnet.models import get_model  # noqa: E402
+from retrievalnet.datasets import get_dataset  # noqa: E402
+from retrievalnet.settings import EXPER_PATH, DATA_PATH  # noqa: E402
 
 
 if __name__ == '__main__':
@@ -48,24 +23,38 @@ if __name__ == '__main__':
     export_name = args.export_name
     with open(args.config, 'r') as f:
         config = yaml.load(f)
-    seqs = config['data']['seqs']
-    camera = config['data']['camera']
-    undistort = config['data'].get('undistort', False)
+    seqs = config['data']['test_seq']
 
     if not isinstance(seqs, list):
         seqs = [seqs]
 
+    if Path(EXPER_PATH, export_name).exists():
+        checkpoint_dir = Path(EXPER_PATH, export_name)
+    else:
+        checkpoint_dir = Path(DATA_PATH, 'weights', config['weights'])
+
     with get_model(config['model']['name'])(
-            data_shape={'image': [None, None, None, 3]}, **config['model']) as net:
-        net.load(osp.join(DATA_PATH, 'weights', config['weights']))
+            data_shape={'image': [None, None, None, config['model']['image_channels']]},
+            **config['model']) as net:
+        net.load(str(checkpoint_dir))
 
         for seq in tqdm(seqs):
-            output_dir = osp.join(EXPER_PATH, 'outputs/{}/{}/'.format(export_name, seq))
-            if not osp.exists(output_dir):
-                os.makedirs(output_dir)
+            output_dir = Path(EXPER_PATH, 'outputs/{}/{}/'.format(export_name, seq))
+            output_dir.mkdir(parents=True, exist_ok=True)
 
-            seq_data = get_seq_images(seq, camera, undistort)
-            for timestamp, im in seq_data:
-                descriptor = net.predict({'image': im}, keys='descriptor')
-                filepath = osp.join(output_dir, '{}.npz'.format(timestamp))
+            config['data']['test_seq'] = seq
+            dataset = get_dataset(config['data']['name'])(**config['data'])
+            test_set = dataset.get_test_set()
+
+            pbar = tqdm()
+            while True:
+                try:
+                    data = next(test_set)
+                except dataset.end_set:
+                    break
+                descriptor = net.predict(data, keys='descriptor')
+                filepath = Path(output_dir, '{}.npz'.format(
+                        data['name'].decode('utf-8')))
                 np.savez_compressed(filepath, descriptor=descriptor)
+                pbar.update(1)
+            pbar.close()
