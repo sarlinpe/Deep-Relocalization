@@ -36,6 +36,7 @@ class BaseModel(metaclass=ABCMeta):
     """
     dataset_names = set(['training', 'validation', 'test'])
     required_baseconfig = ['batch_size', 'learning_rate']
+    _default_config = {'eval_batch_size': 1}
 
     @abstractmethod
     def _model(self, inputs, mode, **config):
@@ -101,7 +102,8 @@ class BaseModel(metaclass=ABCMeta):
         self.name = self.__class__.__name__.lower()  # get child name
 
         # Update config
-        self.config = getattr(self, 'default_config', {})
+        self.config = self._default_config
+        self.config.update(getattr(self, 'default_config', {}))
         self.config.update(config)
 
         required = getattr(self, 'required_config_keys', [])
@@ -123,10 +125,13 @@ class BaseModel(metaclass=ABCMeta):
     def _gpu_tower(self, data, mode):
         # Split the batch between the GPUs (data parallelism)
         with tf.device('/cpu:0'):
-            shards = {d: tf.unstack(v, num=self.config['batch_size']*self.n_gpus, axis=0)
-                      for d, v in data.items()}
-            shards = [{d: tf.stack(v[i::self.n_gpus]) for d, v in shards.items()}
-                      for i in range(self.n_gpus)]
+            with tf.name_scope('{}_data_sharding'.format(mode)):
+                batch_size = self.config['batch_size'] if (mode == Mode.TRAIN) \
+                        else self.config['eval_batch_size']
+                shards = {d: tf.unstack(v, num=batch_size*self.n_gpus, axis=0)
+                          for d, v in data.items()}
+                shards = [{d: tf.stack(v[i::self.n_gpus]) for d, v in shards.items()}
+                          for i in range(self.n_gpus)]
 
         # Create towers, i.e. copies of the model for each GPU,
         # with their own loss and gradients.
@@ -218,8 +223,7 @@ class BaseModel(metaclass=ABCMeta):
                         d = d.repeat().batch(train_batch).prefetch(train_batch)
                         self.dataset_iterators[n] = d.make_one_shot_iterator()
                     else:
-                        d = d.apply(tf.contrib.data.batch_and_drop_remainder(
-                            self.config.get('eval_batch_size', 1)*self.n_gpus))
+                        d = d.batch(self.config['eval_batch_size']*self.n_gpus)
                         self.dataset_iterators[n] = d.make_initializable_iterator()
                     output_types = d.output_types
                     output_shapes = d.output_shapes
@@ -282,8 +286,9 @@ class BaseModel(metaclass=ABCMeta):
 
             if 'validation' in self.datasets and i % validation_interval == 0:
                 metrics = self.evaluate('validation', mute=True)
-                tf.logging.info("Iter {:4d}: loss {:.4f}, accuracy {:.4f}".format(
-                    i, loss, metrics['accuracy']))
+                tf.logging.info(
+                        'Iter {:4d}: loss {:.4f}'.format(i, loss) +
+                        ''.join([', {} {:.4f}'.format(m, metrics[m]) for m in metrics]))
 
                 if output_dir is not None:
                     train_writer.add_summary(summaries, i)
