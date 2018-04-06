@@ -1,12 +1,12 @@
 #!/bin/bash
 
 #output="-oo $(pwd)/out.txt"
-output="-I"
+#output="-I"
 cores="15"
-memory="4500"  # per core
+memory="13500"  # per core
 scratch="5000"
-gpus="1"
-clock="4:00"
+gpus="2"
+clock="120:00"
 model="GeForceGTX1080Ti"
 warn="-wt 15 -wa INT"
 
