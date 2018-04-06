@@ -300,7 +300,7 @@ class BaseModel(metaclass=ABCMeta):
         tf.logging.info('Training finished')
 
     def predict(self, data, keys='*', batch=False):
-        assert set(data.keys()) >= set(self.input_spec.keys())
+        assert set(data.keys()) >= set(self.data_shape.keys())
         if isinstance(keys, str):
             if keys == '*':
                 op = self.pred_out  # just gather all outputs
@@ -310,7 +310,7 @@ class BaseModel(metaclass=ABCMeta):
             op = {k: self.pred_out[k] for k in keys}
         if not batch:  # add batch dimension
             data = {d: [v] for d, v in data.items()}
-        feed = {self.pred_in[i]: data[i] for i in self.input_spec}
+        feed = {self.pred_in[i]: data[i] for i in self.data_shape}
         pred = self.sess.run(op, feed_dict=feed)
         if not batch:  # remove batch dimension
             if isinstance(pred, dict):
