@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import tensorflow as tf
 
+from retrievalnet.utils.tools import dict_update
+
 
 class BaseDataset(metaclass=ABCMeta):
     """Base model class.
@@ -14,7 +16,7 @@ class BaseDataset(metaclass=ABCMeta):
         default_config: A dictionary of potential default configuration values (e.g. the
             size of the validation set).
     """
-    split_names = ['training', 'validation', 'test']
+    default_split_names = ['training', 'validation', 'test']
 
     @abstractmethod
     def _init_dataset(self, **config):
@@ -95,10 +97,10 @@ class BaseDataset(metaclass=ABCMeta):
 
     def __init__(self, **config):
         # Update config
-        self.config = getattr(self, 'default_config', {})
-        self.config.update(config)
+        self.config = dict_update(getattr(self, 'default_config', {}), config)
 
         self.dataset = self._init_dataset(**self.config)
+        self.split_names = getattr(self, 'split_names', self.default_split_names)
 
         self.tf_splits = {}
         self.tf_next = {}
@@ -106,7 +108,7 @@ class BaseDataset(metaclass=ABCMeta):
             for n in self.split_names:
                 self.tf_splits[n] = self._get_data(self.dataset, n, **self.config)
                 self.tf_next[n] = self.tf_splits[n].make_one_shot_iterator().get_next()
-
+        self.end_set = tf.errors.OutOfRangeError
         self.sess = tf.Session()
 
     def _get_set_generator(self, set_name):
