@@ -268,13 +268,14 @@ class BaseModel(metaclass=ABCMeta):
 
         self.sess.run([tf.global_variables_initializer(),
                        tf.local_variables_initializer()])
-        with tf.device('/cpu:0'):
-            self.saver = tf.train.Saver(save_relative_paths=True)
 
     def train(self, iterations, validation_interval=100, output_dir=None):
         assert 'training' in self.datasets, 'Training dataset is required.'
         if output_dir is not None:
             train_writer = tf.summary.FileWriter(output_dir)
+        if not hasattr(self, 'saver'):
+            with tf.device('/cpu:0'):
+                self.saver = tf.train.Saver(save_relative_paths=True)
         if not self.graph.finalized:
             self.graph.finalize()
 
@@ -350,12 +351,48 @@ class BaseModel(metaclass=ABCMeta):
         metrics = {m: np.nanmean(metrics[m], axis=0) for m in metrics}
         return metrics
 
-    def load(self, checkpoint_path):
+    def _checkpoint_var_search(self, checkpoint_path):
+        reader = tf.train.NewCheckpointReader(checkpoint_path)
+        saved_shapes = reader.get_variable_to_shape_map()
+        model_names = set([v.name.split(':')[0] for v in tf.global_variables()])
+        checkpoint_names = set(saved_shapes.keys())
+        found_names = model_names & checkpoint_names
+        missing_names = model_names - checkpoint_names
+        shape_conflicts = set()
+        restored = []
+        with tf.variable_scope('', reuse=True):
+            for name in found_names:
+                var = tf.get_variable(name)
+                var_shape = var.get_shape().as_list()
+                if var_shape == saved_shapes[name]:
+                    restored.append(var)
+                else:
+                    shape_conflicts.add(name)
+        found_names -= shape_conflicts
+        return (restored, sorted(found_names),
+                sorted(missing_names), sorted(shape_conflicts))
+
+    def load(self, checkpoint_path, flexible_restore=True):
         if tf.gfile.IsDirectory(checkpoint_path):
             checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
             if checkpoint_path is None:
                 raise ValueError('Checkpoint directory is empty.')
-        self.saver.restore(self.sess, checkpoint_path)
+        if flexible_restore:
+            var_list, found, missing, conflicts = self._checkpoint_var_search(
+                    checkpoint_path)
+            tf.logging.info('Restoring variables: \n\t{}'.format(
+                '\n\t'.join(found)))
+            if len(missing) > 0:
+                tf.logging.info('Variables not found in checkpoint: \n\t{}'.format(
+                    '\n\t'.join(missing)))
+            if len(conflicts) > 0:
+                tf.logging.info('Variables with incompatible shapes: \n\t{}'.format(
+                    '\n\t'.join(conflicts)))
+        else:
+            var_list = None
+        with tf.device('/cpu:0'):
+            saver = tf.train.Saver(var_list=var_list, save_relative_paths=True)
+        saver.restore(self.sess, checkpoint_path)
 
     def save(self, checkpoint_path):
         step = self.sess.run(self.global_step)
