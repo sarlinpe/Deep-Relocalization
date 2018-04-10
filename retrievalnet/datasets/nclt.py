@@ -26,12 +26,17 @@ class Nclt(BaseDataset):
         paths = {}
 
         # Triplets for training
-        if 'triplet_file' in config:
+        if 'training_triplets' in config:
             self.split_names.extend(['training', 'validation'])
-            triplet_file = Path(base_path, config['triplet_file'])
-            triplets = np.load(triplet_file)
-            splits = {'validation': triplets[:config['validation_size']],
-                      'training': triplets[config['validation_size']:]}
+            training_triplets = np.load(Path(base_path, config['training_triplets']))
+            if 'validation_triplets' in config:
+                validation_triplets = np.load(
+                        Path(base_path, config['validation_triplets']))
+                validation_triplets = validation_triplets[:config['validation_size']]
+            else:
+                validation_triplets = training_triplets[:config['validation_size']]
+                training_triplets = training_triplets[config['validation_size']:]
+            splits = {'validation': validation_triplets, 'training': training_triplets}
             for s in splits:
                 paths[s] = {'image': [], 'p': [], 'n': []}
                 for triplet in splits[s]:
