@@ -29,14 +29,16 @@ if __name__ == '__main__':
         seqs = [seqs]
 
     if Path(EXPER_PATH, export_name).exists():
-        checkpoint_dir = Path(EXPER_PATH, export_name)
+        checkpoint_path = Path(EXPER_PATH, export_name)
+        if 'weights' in config:
+            checkpoint_path = Path(checkpoint_path, config['weights'])
     else:
-        checkpoint_dir = Path(DATA_PATH, 'weights', config['weights'])
+        checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
 
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
             **config['model']) as net:
-        net.load(str(checkpoint_dir))
+        net.load(str(checkpoint_path))
 
         for seq in tqdm(seqs):
             output_dir = Path(EXPER_PATH, 'outputs/{}/{}/'.format(export_name, seq))

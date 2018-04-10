@@ -269,13 +269,15 @@ class BaseModel(metaclass=ABCMeta):
         self.sess.run([tf.global_variables_initializer(),
                        tf.local_variables_initializer()])
 
-    def train(self, iterations, validation_interval=100, output_dir=None):
+    def train(self, iterations, validation_interval=100, output_dir=None,
+              save_interval=None, checkpoint_path=None, keep_checkpoints=1):
         assert 'training' in self.datasets, 'Training dataset is required.'
         if output_dir is not None:
             train_writer = tf.summary.FileWriter(output_dir)
         if not hasattr(self, 'saver'):
             with tf.device('/cpu:0'):
-                self.saver = tf.train.Saver(save_relative_paths=True)
+                self.saver = tf.train.Saver(save_relative_paths=True,
+                                            max_to_keep=keep_checkpoints)
         if not self.graph.finalized:
             self.graph.finalize()
 
@@ -285,6 +287,8 @@ class BaseModel(metaclass=ABCMeta):
                     [self.loss, self.summaries, self.trainer],
                     feed_dict={self.handle: self.dataset_handles['training']})
 
+            if save_interval and checkpoint_path and i != 0 and i % save_interval == 0:
+                self.save(checkpoint_path)
             if 'validation' in self.datasets and i % validation_interval == 0:
                 metrics = self.evaluate('validation', mute=True)
                 tf.logging.info(
