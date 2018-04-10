@@ -10,6 +10,7 @@ model:
     batch_size: 5
     eval_batch_size: 10
     learning_rate: 0.001
+    use_attention: true
     normalize_feature_map: true
     train_attention: true
     triplet_margin: 0.2

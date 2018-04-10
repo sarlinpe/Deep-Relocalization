@@ -15,6 +15,8 @@ class Delf(BaseModel):
     }
     required_config_keys = []
     default_config = {
+            'normalize_input': False,
+            'use_attention': False,
             'attention_kernel': 1,
             'normalize_average': True,
             'normalize_feature_map': True
@@ -24,7 +26,8 @@ class Delf(BaseModel):
         image = inputs['image']
         if image.shape[-1] == 1:
             image = tf.tile(image, [1, 1, 1, 3])
-        image = normalize_image(image)
+        if config['normalize_input']:
+            image = normalize_image(image)
 
         with slim.arg_scope(resnet.resnet_arg_scope()):
             _, encoder = resnet.resnet_v1_50(image,
@@ -33,22 +36,25 @@ class Delf(BaseModel):
                                              scope='resnet_v1_50')
         feature_map = encoder['resnet_v1_50/block3']
 
-        with tf.variable_scope('attonly/attention/compute'):
-            with slim.arg_scope(resnet.resnet_arg_scope()):
-                with slim.arg_scope([slim.batch_norm], is_training=(mode == Mode.TRAIN)):
-                    attention = slim.conv2d(
-                            feature_map, 512, config['attention_kernel'], rate=1,
-                            activation_fn=tf.nn.relu, scope='conv1')
-                    attention = slim.conv2d(
-                            attention, 1, config['attention_kernel'], rate=1,
-                            activation_fn=None, normalizer_fn=None, scope='conv2')
-                    attention = tf.nn.softplus(attention)
-
-        if config['normalize_feature_map']:
-            feature_map = tf.nn.l2_normalize(feature_map, -1)
-        descriptor = tf.reduce_sum(feature_map*attention, axis=[1, 2])
-        if config['normalize_average']:
-            descriptor /= tf.reduce_sum(attention, axis=[1, 2])
+        if config['use_attention']:
+            with tf.variable_scope('attonly/attention/compute'):
+                with slim.arg_scope(resnet.resnet_arg_scope()):
+                    with slim.arg_scope([slim.batch_norm],
+                                        is_training=(mode == Mode.TRAIN)):
+                        attention = slim.conv2d(
+                                feature_map, 512, config['attention_kernel'], rate=1,
+                                activation_fn=tf.nn.relu, scope='conv1')
+                        attention = slim.conv2d(
+                                attention, 1, config['attention_kernel'], rate=1,
+                                activation_fn=None, normalizer_fn=None, scope='conv2')
+                        attention = tf.nn.softplus(attention)
+            if config['normalize_feature_map']:
+                feature_map = tf.nn.l2_normalize(feature_map, -1)
+            descriptor = tf.reduce_sum(feature_map*attention, axis=[1, 2])
+            if config['normalize_average']:
+                descriptor /= tf.reduce_sum(attention, axis=[1, 2])
+        else:
+            descriptor = tf.reduce_max(feature_map, [1, 2])
 
         return {'descriptor': descriptor}
 
