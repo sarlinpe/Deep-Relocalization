@@ -1,0 +1,18 @@
+syntax = "proto2";
+package deep_relocalization.proto;
+
+
+message DescriptorIndex {
+  optional string model_name = 1;
+  optional int64 descriptor_shape = 2;
+
+  message KeyFrame {
+    required int64 id = 1;
+
+    message Descriptor {
+      repeated float value = 2 [packed = true];
+    }
+    required Descriptor frame_descriptor = 2;
+  }
+  repeated KeyFrame key_frames = 3;
+}
