@@ -9,41 +9,53 @@ def normalize_image(image, pixel_value_offset=128.0, pixel_value_scale=128.0):
     return tf.div(tf.subtract(image, pixel_value_offset), pixel_value_scale)
 
 
-def delf_model(image, mode, config):
+def netvlad(image, mode, config):
     image = normalize_image(image)
     if image.shape[-1] == 1:
         image = tf.tile(image, [1, 1, 1, 3])
 
     with slim.arg_scope(resnet.resnet_arg_scope()):
-        is_training = config['train_backbone'] and (mode == Mode.TRAIN)
-        with slim.arg_scope([slim.conv2d, slim.batch_norm], trainable=is_training):
+        training = config['train_backbone'] and (mode == Mode.TRAIN)
+        with slim.arg_scope([slim.conv2d, slim.batch_norm], trainable=training):
             _, encoder = resnet.resnet_v1_50(image,
-                                             is_training=is_training,
+                                             is_training=training,
                                              global_pool=False,
                                              scope='resnet_v1_50')
     feature_map = encoder['resnet_v1_50/block3']
 
-    if config['use_attention']:
-        with tf.variable_scope('attonly/attention/compute'):
-            with slim.arg_scope(resnet.resnet_arg_scope()):
-                is_training = config['train_attention'] and (mode == Mode.TRAIN)
-                with slim.arg_scope([slim.conv2d, slim.batch_norm],
-                                    trainable=is_training):
-                    with slim.arg_scope([slim.batch_norm], is_training=is_training):
-                        attention = slim.conv2d(
-                                feature_map, 512, config['attention_kernel'], rate=1,
-                                activation_fn=tf.nn.relu, scope='conv1')
-                        attention = slim.conv2d(
-                                attention, 1, config['attention_kernel'], rate=1,
-                                activation_fn=None, normalizer_fn=None, scope='conv2')
-                        attention = tf.nn.softplus(attention)
-        if config['normalize_feature_map']:
-            feature_map = tf.nn.l2_normalize(feature_map, -1)
-        descriptor = tf.reduce_sum(feature_map*attention, axis=[1, 2])
-        if config['normalize_average']:
-            descriptor /= tf.reduce_sum(attention, axis=[1, 2])
-    else:
-        descriptor = tf.reduce_max(feature_map, [1, 2])
+    with tf.variable_scope('vlad'):
+        training = config['train_vlad'] and (mode == Mode.TRAIN)
+        if config['intermediate_proj']:
+            with slim.arg_scope([slim.conv2d, slim.batch_norm], trainable=training):
+                with slim.arg_scope([slim.batch_norm], is_training=training):
+                    feature_map = slim.conv2d(
+                            feature_map, config['intermediate_proj'], 1, rate=1,
+                            activation_fn=None, normalizer_fn=slim.batch_norm,
+                            weights_initializer=slim.initializers.xavier_initializer(),
+                            trainable=training, scope='pre_proj')
+
+        batch_size = tf.shape(feature_map)[0]
+        feature_dim = feature_map.shape[-1]
+
+        with slim.arg_scope([slim.batch_norm], trainable=training, is_training=training):
+            memberships = slim.conv2d(
+                    feature_map, config['n_clusters'], 1, rate=1,
+                    activation_fn=None, normalizer_fn=slim.batch_norm,
+                    weights_initializer=slim.initializers.xavier_initializer(),
+                    trainable=training, scope='memberships')
+            memberships = tf.nn.softmax(memberships, axis=-1)
+
+        clusters = slim.model_variable(
+                'clusters', shape=[1, 1, 1, config['n_clusters'], feature_dim],
+                initializer=slim.initializers.xavier_initializer())
+        residuals = clusters - tf.expand_dims(feature_map, axis=3)
+        residuals *= tf.expand_dims(memberships, axis=-1)
+        descriptor = tf.reduce_sum(residuals, axis=[1, 2])
+
+        descriptor = tf.nn.l2_normalize(descriptor, axis=1)  # intra-normalization
+        descriptor = tf.reshape(descriptor,
+                                [batch_size, feature_dim*config['n_clusters']])
+        descriptor = tf.nn.l2_normalize(descriptor, axis=1)
 
     if config['dimensionality_reduction']:
         descriptor = tf.nn.l2_normalize(descriptor, -1)
@@ -62,7 +74,7 @@ def delf_model(image, mode, config):
     return descriptor
 
 
-class DelfTriplets(BaseModel):
+class NetvladTriplets(BaseModel):
     input_spec = {
             'image': {'shape': [None, None, None, 1], 'type': tf.float32},
             'p': {'shape': [None, None, None, 1], 'type': tf.float32},
@@ -70,26 +82,24 @@ class DelfTriplets(BaseModel):
     }
     required_config_keys = []
     default_config = {
-            'use_attention': True,
-            'attention_kernel': 1,
-            'normalize_average': True,
-            'normalize_feature_map': True,
             'triplet_margin': 0.5,
             'dimensionality_reduction': None,
+            'intermediate_proj': None,
+            'n_clusters': 64,
             'proj_regularizer': 0.,
             'train_backbone': False,
-            'train_attention': True,
+            'train_vlad': True,
     }
 
     def _model(self, inputs, mode, **config):
         if mode == Mode.PRED:
-            descriptor = delf_model(inputs['image'], mode, config)
+            descriptor = netvlad(inputs['image'], mode, config)
             return {'descriptor': descriptor}
 
         descriptors = {}
         for e in ['image', 'p', 'n']:
             with tf.name_scope('triplet_{}'.format(e)):
-                descriptors['descriptor_'+e] = delf_model(inputs[e], mode, config)
+                descriptors['descriptor_'+e] = netvlad(inputs[e], mode, config)
         return descriptors
 
     def _loss(self, outputs, inputs, **config):
