@@ -10,8 +10,8 @@ PROTOBUF_CATKIN_GENERATE_CPP2("proto" PROTO_SRCS PROTO_HDRS ${PROTO_DEFNS})
 cs_add_library(${PROJECT_NAME}_lib ${PROTO_SRCS} ${PROTO_HDRS})
 
 # Preprocessor macros
-add_definitions(-DDATA_ROOT_PATH="${CMAKE_SOURCE_DIR}/data")
-add_definitions(-DMODEL_ROOT_PATH="${CMAKE_SOURCE_DIR}/model")
+add_definitions(-DDATA_ROOT_PATH="${CMAKE_SOURCE_DIR}/data/")
+add_definitions(-DMODEL_ROOT_PATH="${CMAKE_SOURCE_DIR}/models/")
 
 # Test files
 cs_add_executable(test_opencv test/test_opencv.cc)

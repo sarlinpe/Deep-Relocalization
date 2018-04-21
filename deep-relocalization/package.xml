@@ -3,8 +3,8 @@
   <name>deep_relocalization</name>
   <version>0.0.0</version>
   <description>The deep_relocalization package</description>
-  <maintainer email="fdebrain@student.ethz.ch">Frederic Debraine</maintainer>
   <maintainer email="psarlin@student.ethz.ch">Paul-Edouard Sarlin</maintainer>
+  <maintainer email="fdebrain@student.ethz.ch">Frederic Debraine</maintainer>
   <license>Apache 2.0</license>
 
   <buildtool_depend>catkin_simple</buildtool_depend>

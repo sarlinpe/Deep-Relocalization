@@ -8,10 +8,10 @@
 #include <tensorflow/core/platform/env.h>
 #include <tensorflow/core/public/session.h>
 #include <tensorflow/core/graph/graph_def_builder.h>
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/graph.pb.h"
-#include "tensorflow/cc/saved_model/loader.h"
-#include "tensorflow/cc/saved_model/tag_constants.h"
+#include <tensorflow/core/framework/tensor.h>
+#include <tensorflow/core/framework/graph.pb.h>
+#include <tensorflow/cc/saved_model/loader.h>
+#include <tensorflow/cc/saved_model/tag_constants.h>
 
 #include <Eigen/Core>
 
@@ -39,7 +39,7 @@ class TensorflowNet {
 
         // Check input and output shapes
         tensorflow::GraphDef graph_def = bundle.meta_graph_def.graph_def();
-        for(auto &node: graph_def.node()) {
+        for(auto& node : graph_def.node()) {
             if(node.name() == input_tensor_name) {
                 input_channels = node.attr().at("shape").shape().dim(3).size();
             }
@@ -51,12 +51,12 @@ class TensorflowNet {
         }
     }
 
-    void perform_inference(cv::Mat& image, DescriptorType& descriptor) {
+    void performInference(cv::Mat& image, DescriptorType& descriptor) {
         CHECK(image.data);
         CHECK(image.isContinuous());
-        CHECK(image.channels() == input_channels);
+        CHECK_EQ(image.channels(), input_channels);
 
-        int height = image.size().height, width = image.size().width;
+        unsigned height = image.size().height, width = image.size().width;
         if(image.type() != CV_32F)
             image.convertTo(image, CV_32F);
 
@@ -81,7 +81,7 @@ class TensorflowNet {
         descriptor = descriptor_map;  // Copy
     }
 
-    int get_descriptor_size() {
+    unsigned descriptorSize() {
         return descriptor_size;
     }
 
@@ -89,8 +89,8 @@ class TensorflowNet {
     tensorflow::SavedModelBundle bundle;
     std::string input_name;
     std::string output_name;
-    int descriptor_size;
-    int input_channels;
+    unsigned descriptor_size;
+    unsigned input_channels;
 };
 
 #endif  // DEEP_RELOCALIZATION_TENSORFLOW_NET_H_
