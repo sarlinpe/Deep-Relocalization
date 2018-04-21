@@ -6,7 +6,7 @@
 using namespace std;
 
 int main () {
-    string image_path = string(DATA_PATH) + "/nclt_sample.png";
+    string image_path = string(DATA_ROOT_PATH) + "/nclt_sample.jpg";
     cout << image_path << endl;
     cv::Mat image;
     image = cv::imread(image_path, cv::IMREAD_ANYDEPTH);
