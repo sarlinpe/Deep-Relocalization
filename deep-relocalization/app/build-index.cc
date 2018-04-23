@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 
+#include <glog/logging.h>
 #include <gflags/gflags.h>
 #include <vi-map/vi-map.h>
 
@@ -14,13 +15,18 @@ DEFINE_string(
         map_name, "euroc_ml1",
         "Name of the map in `maps/`.");
 DEFINE_string(
-        model_name, "resnet50_delf_vlad_triplets_margin-02_proj-40_sq/",
+        model_name, "resnet50_delf_vlad_triplets_margin-02_proj-40_sq",
         "Name of the Tensorflow model in `models/`.");
 DEFINE_string(proto_name, "euroc_ml1_proto.pb",
         "Name of the exported index protobuf in `data/`.");
 
 int main(int argc, char** argv) {
+    google::InitGoogleLogging(argv[0]);
     google::ParseCommandLineFlags(&argc, &argv, true);
+    google::InstallFailureSignalHandler();
+    FLAGS_alsologtostderr = true;
+    FLAGS_colorlogtostderr = true;
+
     string map_path = string(MAP_ROOT_PATH) + FLAGS_map_name;
     string model_path = string(MODEL_ROOT_PATH) + FLAGS_model_name;
     string proto_path = string(DATA_ROOT_PATH) + FLAGS_proto_name;
