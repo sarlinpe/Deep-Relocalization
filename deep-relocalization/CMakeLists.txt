@@ -28,6 +28,8 @@ cs_add_executable(test_tensorflow test/test_tensorflow.cc)
 cs_add_executable(test_inference test/test_inference.cc)
 cs_add_executable(test_build_index test/test_build_index.cc)
 target_link_libraries(test_build_index ${PROJECT_NAME})
+cs_add_executable(test_query_index test/test_query_index.cc)
+target_link_libraries(test_query_index ${PROJECT_NAME})
 
 cs_install()
 cs_export()

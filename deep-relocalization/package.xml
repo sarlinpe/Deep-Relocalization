@@ -20,4 +20,6 @@
   <depend>vi_map</depend>
   <depend>posegraph</depend>
   <depend>aslam_cv_frames</depend>
+  <depend>aslam_cv_common</depend>
+  <depend>libnabo</depend>
 </package>
