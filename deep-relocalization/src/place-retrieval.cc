@@ -14,18 +14,15 @@
 
 #include "deep-relocalization/place-retrieval.h"
 
-void PlaceRetrieval::buildIndexFromMap(
-        const std::string map_path,
+void PlaceRetrieval::BuildIndexFromMap(
+        const vi_map::VIMap& map,
         deep_relocalization::proto::DescriptorIndex* proto_index) {
     CHECK_NOTNULL(proto_index);
-    proto_index->set_descriptor_size(network.descriptorSize());
-
-    vi_map::VIMap map;
-    CHECK(map.loadFromFolder(map_path)) << "Loading of the vi-map failed.";
+    proto_index->set_descriptor_size(network_.descriptor_size());
 
     vi_map::MissionIdList mission_ids;
     map.getAllMissionIdsSortedByTimestamp(&mission_ids);
-    for(const vi_map::MissionId& mission_id : mission_ids) {
+    for (const vi_map::MissionId& mission_id : mission_ids) {
         pose_graph::VertexIdList vertex_ids;
         map.getAllVertexIdsInMissionAlongGraph(mission_id, &vertex_ids);
 
@@ -41,16 +38,16 @@ void PlaceRetrieval::buildIndexFromMap(
             const aslam::VisualFrame& visual_frame = vertex.getVisualFrame(frame_idx);
             deep_relocalization::proto::DescriptorIndex::Frame* proto_frame =
                     proto_index->add_frames();
-            ::common::aslam_id_proto::serialize(
+            common::aslam_id_proto::serialize(
                     visual_frame.getId(), proto_frame->mutable_id());
 
             // Compute and export descriptor
             cv::Mat image;
             map.getRawImage(vertex, frame_idx, &image);
             TensorflowNet::DescriptorType descriptor;
-            descriptor.resize(network.descriptorSize(), Eigen::NoChange);
-            network.performInference(image, descriptor);
-            ::common::eigen_proto::serialize(
+            descriptor.resize(network_.descriptor_size(), Eigen::NoChange);
+            network_.PerformInference(image, &descriptor);
+            common::eigen_proto::serialize(
                     Eigen::MatrixXf(descriptor),
                     proto_frame->mutable_global_descriptor());
 

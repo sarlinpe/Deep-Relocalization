@@ -18,8 +18,8 @@ int main() {
     cvtColor(image, image, cv::COLOR_RGB2GRAY);
 
     TensorflowNet::DescriptorType descriptor;
-    descriptor.resize(network.descriptorSize(), Eigen::NoChange);
-    network.performInference(image, descriptor);
+    descriptor.resize(network.descriptor_size(), Eigen::NoChange);
+    network.PerformInference(image, &descriptor);
 
     cout << "Inference successfully performed." << endl;
 }
