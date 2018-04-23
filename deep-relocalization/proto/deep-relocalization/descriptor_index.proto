@@ -10,8 +10,9 @@ message DescriptorIndex {
   optional int64 descriptor_size = 3;
 
   message Frame {
-    required common.proto.Id id = 1;
-    required common.proto.MatrixXf global_descriptor = 2;
+    required common.proto.Id vertex_id = 1;
+    required uint32 frame_index = 2;
+    required common.proto.MatrixXf global_descriptor = 3;
   }
   repeated Frame frames = 4;
 }

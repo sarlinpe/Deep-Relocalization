@@ -3,9 +3,9 @@
 #include <glog/logging.h>
 
 #include <vi-map/vi-map.h>
+#include <vi-map/unique-id.h>
 #include <posegraph/pose-graph.h>
-#include <aslam/frames/visual-frame.h>
-#include <aslam/common/unique-id.h>
+#include <posegraph/unique-id.h>
 #include <aslam/common/timer.h>
 #include <maplab-common/aslam-id-proto.h>
 #include <maplab-common/eigen-proto.h>
@@ -34,17 +34,15 @@ void PlaceRetrieval::BuildIndexFromMap(
             if(!vertex.numFrames())
                 continue;
 
-            // Add only the first frame
-            unsigned frame_idx = 0;
-            const aslam::VisualFrame& visual_frame = vertex.getVisualFrame(frame_idx);
+            unsigned frame_index = 0;  // Add only the first frame
             deep_relocalization::proto::DescriptorIndex::Frame* proto_frame =
                     proto_index->add_frames();
-            common::aslam_id_proto::serialize(
-                    visual_frame.getId(), proto_frame->mutable_id());
+            vertex_id.serialize(proto_frame->mutable_vertex_id());
+            proto_frame->set_frame_index(frame_index);
 
             // Compute and export descriptor
             cv::Mat image;
-            map.getRawImage(vertex, frame_idx, &image);
+            map.getRawImage(vertex, frame_index, &image);
             TensorflowNet::DescriptorType descriptor;
             descriptor.resize(network_.descriptor_size(), Eigen::NoChange);
             network_.PerformInference(image, &descriptor);
@@ -66,9 +64,10 @@ void PlaceRetrieval::LoadIndex(
     common::ProgressBar progress_bar(proto_index.frames_size());
     for (const deep_relocalization::proto::DescriptorIndex::Frame& proto_frame :
             proto_index.frames()) {
-        indexed_frame_ids_.emplace_back();
-        common::aslam_id_proto::deserialize(
-                proto_frame.id(), &indexed_frame_ids_.back());
+        pose_graph::VertexId vertex_id;
+        vertex_id.deserialize(proto_frame.vertex_id());
+        size_t frame_index = proto_frame.frame_index(); // static_cast<size_t>()
+        indexed_frame_identifiers_.emplace_back(vertex_id, frame_index);
 
         KDTreeIndex::DescriptorMatrixType descriptor;
         common::eigen_proto::deserialize(proto_frame.global_descriptor(), &descriptor);
@@ -82,7 +81,8 @@ void PlaceRetrieval::LoadIndex(
 
 void PlaceRetrieval::RetrieveNearestNeighbors(
         const cv::Mat& input_image, const unsigned num_neighbors,
-        const float max_distance, FrameIdsType* retrieved_ids) {
+        const float max_distance,
+        vi_map::VisualFrameIdentifierList* retrieved_frame_identifiers) {
     TensorflowNet::DescriptorType descriptor;
     descriptor.resize(network_.descriptor_size(), Eigen::NoChange);
     timing::Timer timer_inference("Deep Relocalization: Compute descriptor");
@@ -98,13 +98,14 @@ void PlaceRetrieval::RetrieveNearestNeighbors(
             descriptor, num_neighbors, &indices, &distances, max_distance);
     timer_get_nn.Stop();
 
-    for (int nn_search_idx = 0; nn_search_idx < num_neighbors; ++nn_search_idx) {
+    for (unsigned nn_search_idx = 0; nn_search_idx < num_neighbors; ++nn_search_idx) {
         const int nn_database_idx = indices(nn_search_idx, 0);
         const float nn_distance = distances(nn_search_idx, 0);
         if (nn_database_idx == -1 ||
                 nn_distance == std::numeric_limits<float>::infinity()) {
             break;  // No more results
         }
-        retrieved_ids->push_back(indexed_frame_ids_[nn_database_idx]);
+        retrieved_frame_identifiers->push_back(
+                indexed_frame_identifiers_[nn_database_idx]);
     }
 }

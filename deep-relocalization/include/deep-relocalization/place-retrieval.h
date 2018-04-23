@@ -6,7 +6,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <vi-map/vi-map.h>
-#include <aslam/common/unique-id.h>
+#include <vi-map/unique-id.h>
 
 #include "deep-relocalization/tensorflow-net.h"
 #include "deep-relocalization/kd-tree-index.h"
@@ -14,8 +14,6 @@
 
 class PlaceRetrieval {
   public:
-    typedef std::vector<aslam::FrameId> FrameIdsType;
-
     PlaceRetrieval(const std::string model_path):
             network_(model_path, "image", "descriptor") {
         index_.reset(new KDTreeIndex(network_.descriptor_size()));
@@ -29,12 +27,13 @@ class PlaceRetrieval {
 
     void RetrieveNearestNeighbors(
             const cv::Mat& input_image, const unsigned num_neighbors,
-            const float max_distance, FrameIdsType* retrieved_ids);
+            const float max_distance,
+            vi_map::VisualFrameIdentifierList* retrieved_frame_identifiers);
 
   private:
     TensorflowNet network_;
     std::unique_ptr<KDTreeIndex> index_;
-    FrameIdsType indexed_frame_ids_;
+    vi_map::VisualFrameIdentifierList indexed_frame_identifiers_;
 };
 
 #endif  // DEEP_RELOCALIZATION_PLACE_RETRIEVAL_H_
