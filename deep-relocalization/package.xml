@@ -22,4 +22,5 @@
   <depend>aslam_cv_frames</depend>
   <depend>aslam_cv_common</depend>
   <depend>libnabo</depend>
+  <depend>minkindr</depend>
 </package>

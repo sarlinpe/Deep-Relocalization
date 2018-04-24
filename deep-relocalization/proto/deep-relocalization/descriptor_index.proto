@@ -12,7 +12,10 @@ message DescriptorIndex {
   message Frame {
     required common.proto.Id vertex_id = 1;
     required uint32 frame_index = 2;
-    required common.proto.MatrixXf global_descriptor = 3;
+    required string resource_name = 3;
+    required common.proto.MatrixXf global_descriptor = 4;
+    optional common.proto.MatrixXd position_vector = 5;
+    optional common.proto.MatrixXd rotation_matrix = 6;
   }
   repeated Frame frames = 4;
 }

@@ -6,10 +6,13 @@
 #include <vi-map/unique-id.h>
 #include <posegraph/pose-graph.h>
 #include <posegraph/unique-id.h>
+#include <aslam/common/pose-types.h>
 #include <aslam/common/timer.h>
 #include <maplab-common/aslam-id-proto.h>
 #include <maplab-common/eigen-proto.h>
 #include <maplab-common/progress-bar.h>
+#include <kindr/minimal/quat-transformation.h>
+#include <map-resources/resource-common.h>
 
 #include <opencv2/opencv.hpp>
 
@@ -17,7 +20,7 @@
 
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
-        deep_relocalization::proto::DescriptorIndex* proto_index) {
+        deep_relocalization::proto::DescriptorIndex* proto_index, bool index_pose) {
     CHECK_NOTNULL(proto_index);
     proto_index->set_descriptor_size(network_.descriptor_size());
 
@@ -27,7 +30,8 @@ void PlaceRetrieval::BuildIndexFromMap(
         pose_graph::VertexIdList vertex_ids;
         map.getAllVertexIdsInMissionAlongGraph(mission_id, &vertex_ids);
 
-        LOG(INFO) << "Computing descriptors for mission #" << mission_id;
+        LOG(INFO) << "Computing " << vertex_ids.size()
+                  << " descriptors for mission " << mission_id.printString();
         common::ProgressBar progress_bar(vertex_ids.size());
         for (const pose_graph::VertexId& vertex_id : vertex_ids) {
             const vi_map::Vertex& vertex = map.getVertex(vertex_id);
@@ -35,12 +39,16 @@ void PlaceRetrieval::BuildIndexFromMap(
                 continue;
 
             unsigned frame_index = 0;  // Add only the first frame
+
             deep_relocalization::proto::DescriptorIndex::Frame* proto_frame =
                     proto_index->add_frames();
             vertex_id.serialize(proto_frame->mutable_vertex_id());
             proto_frame->set_frame_index(frame_index);
+            backend::ResourceIdSet resource_ids;
+            vertex.getFrameResourceIdsOfType(
+                    frame_index, backend::ResourceType::kRawImage, &resource_ids);
+            proto_frame->set_resource_name(resource_ids.begin()->hexString());
 
-            // Compute and export descriptor
             cv::Mat image;
             map.getRawImage(vertex, frame_index, &image);
             TensorflowNet::DescriptorType descriptor;
@@ -49,6 +57,16 @@ void PlaceRetrieval::BuildIndexFromMap(
             common::eigen_proto::serialize(
                     Eigen::MatrixXf(descriptor),
                     proto_frame->mutable_global_descriptor());
+
+            if(index_pose) {
+                aslam::Transformation transf = map.getVertex_T_G_I(vertex_id);
+                common::eigen_proto::serialize(
+                        Eigen::MatrixXd(transf.getPosition()),
+                        proto_frame->mutable_position_vector());
+                common::eigen_proto::serialize(
+                        Eigen::MatrixXd(transf.getRotationMatrix()),
+                        proto_frame->mutable_rotation_matrix());
+            }
 
             progress_bar.increment();
         }
