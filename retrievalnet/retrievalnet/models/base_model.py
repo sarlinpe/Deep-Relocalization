@@ -358,7 +358,7 @@ class BaseModel(metaclass=ABCMeta):
     def _checkpoint_var_search(self, checkpoint_path):
         reader = tf.train.NewCheckpointReader(checkpoint_path)
         saved_shapes = reader.get_variable_to_shape_map()
-        model_names = set([v.name.split(':')[0] for v in tf.global_variables()])
+        model_names = set([v.name.split(':')[0] for v in tf.model_variables()])
         checkpoint_names = set(saved_shapes.keys())
         found_names = model_names & checkpoint_names
         missing_names = model_names - checkpoint_names

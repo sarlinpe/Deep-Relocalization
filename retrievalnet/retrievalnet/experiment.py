@@ -22,6 +22,8 @@ def train(config, n_iter, output_dir, checkpoint_name='model.ckpt'):
     with _init_graph(config) as net:
         if 'weights' in config:
             net.load(os.path.join(DATA_PATH, 'weights', config['weights']))
+        elif 'weights_exper' in config:
+            net.load(os.path.join(EXPER_PATH, config['weights_exper']))
         try:
             net.train(n_iter, output_dir=output_dir,
                       validation_interval=config.get('validation_interval', 100),
