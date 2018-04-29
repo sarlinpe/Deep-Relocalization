@@ -3,6 +3,7 @@ from tensorflow.contrib import slim
 
 from .base_model import BaseModel, Mode
 from .backbones import resnet_v1 as resnet
+from .utils import triplet_loss
 
 
 def normalize_image(image, pixel_value_offset=128.0, pixel_value_scale=128.0):
@@ -47,7 +48,7 @@ def netvlad(image, mode, config):
 
         clusters = slim.model_variable(
                 'clusters', shape=[1, 1, 1, config['n_clusters'], feature_dim],
-                initializer=slim.initializers.xavier_initializer())
+                initializer=slim.initializers.xavier_initializer(), trainable=training)
         residuals = clusters - tf.expand_dims(feature_map, axis=3)
         residuals *= tf.expand_dims(memberships, axis=-1)
         descriptor = tf.reduce_sum(residuals, axis=[1, 2])
@@ -89,6 +90,8 @@ class NetvladTriplets(BaseModel):
             'proj_regularizer': 0.,
             'train_backbone': False,
             'train_vlad': True,
+            'loss_in': False,
+            'loss_squared': True,
     }
 
     def _model(self, inputs, mode, **config):
@@ -103,21 +106,9 @@ class NetvladTriplets(BaseModel):
         return descriptors
 
     def _loss(self, outputs, inputs, **config):
-        distance_p = tf.reduce_sum(tf.square(outputs['descriptor_image']
-                                             - outputs['descriptor_p']), axis=-1)
-        distance_n = tf.reduce_sum(tf.square(outputs['descriptor_image']
-                                             - outputs['descriptor_n']), axis=-1)
-        loss = distance_p + tf.maximum(config['triplet_margin'] - distance_n, 0)
-        loss = tf.reduce_mean(loss)
+        loss, _, _ = triplet_loss(outputs, inputs, **config)
         return loss
 
     def _metrics(self, outputs, inputs, **config):
-        distance_p = tf.norm(outputs['descriptor_image']-outputs['descriptor_p'], axis=1)
-        distance_n = tf.norm(outputs['descriptor_image']-outputs['descriptor_n'], axis=1)
-        distance_p = tf.square(distance_p)
-        distance_n = tf.square(distance_n)
-        loss = distance_p + tf.maximum(config['triplet_margin'] - distance_n, 0)
-        loss = tf.reduce_mean(loss)
-        return {'loss': loss,
-                'distance_n': tf.reduce_mean(distance_n),
-                'distance_p': tf.reduce_mean(distance_p)}
+        loss, distance_p, distance_n = triplet_loss(outputs, inputs, **config)
+        return {'loss': loss, 'distance_p': distance_p, 'distance_n': distance_n}
