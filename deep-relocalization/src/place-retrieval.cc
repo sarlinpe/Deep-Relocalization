@@ -1,4 +1,5 @@
 #include <string>
+#include <math.h>
 
 #include <glog/logging.h>
 
@@ -20,7 +21,8 @@
 
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
-        deep_relocalization::proto::DescriptorIndex* proto_index, bool index_pose) {
+        deep_relocalization::proto::DescriptorIndex* proto_index,
+        bool index_pose, unsigned subsampling) {
     CHECK_NOTNULL(proto_index);
     proto_index->set_descriptor_size(network_.descriptor_size());
 
@@ -30,10 +32,13 @@ void PlaceRetrieval::BuildIndexFromMap(
         pose_graph::VertexIdList vertex_ids;
         map.getAllVertexIdsInMissionAlongGraph(mission_id, &vertex_ids);
 
-        LOG(INFO) << "Computing " << vertex_ids.size()
+        CHECK(vertex_ids.size());
+        unsigned num_indexed = 1 + (vertex_ids.size() - 1) / subsampling;
+        LOG(INFO) << "Computing " << num_indexed
                   << " descriptors for mission " << mission_id.printString();
-        common::ProgressBar progress_bar(vertex_ids.size());
-        for (const pose_graph::VertexId& vertex_id : vertex_ids) {
+        common::ProgressBar progress_bar(num_indexed);
+        for (int i = 0; i < vertex_ids.size(); i += subsampling) {
+            const pose_graph::VertexId& vertex_id = vertex_ids[i];
             const vi_map::Vertex& vertex = map.getVertex(vertex_id);
             if(!vertex.numFrames())
                 continue;

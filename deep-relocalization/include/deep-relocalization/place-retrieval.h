@@ -22,7 +22,7 @@ class PlaceRetrieval {
     void BuildIndexFromMap(
             const vi_map::VIMap& map,
             deep_relocalization::proto::DescriptorIndex* proto_index,
-            bool index_pose=false);
+            bool index_pose=false, unsigned subsampling=1);
 
     void LoadIndex(const deep_relocalization::proto::DescriptorIndex& proto_index);
 

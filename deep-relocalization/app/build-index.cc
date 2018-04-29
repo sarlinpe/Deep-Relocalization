@@ -19,6 +19,8 @@ DEFINE_string(
         "Name of the Tensorflow model in `models/`.");
 DEFINE_string(proto_name, "euroc_ml1_proto.pb",
         "Name of the exported index protobuf in `data/`.");
+DEFINE_uint64(
+        subsampling, 1, "Interval at which the frames should be indexed");
 DEFINE_bool(index_pose, false,
         "Whether the fame pose (i.e. position vector and rotation matrix) should be"
         "add to the index.");
@@ -42,7 +44,7 @@ int main(int argc, char** argv) {
     proto_index.set_data_name(FLAGS_map_name);
 
     PlaceRetrieval retrieval(model_path);
-    retrieval.BuildIndexFromMap(map, &proto_index, FLAGS_index_pose);
+    retrieval.BuildIndexFromMap(map, &proto_index, FLAGS_index_pose, FLAGS_subsampling);
 
     fstream output(proto_path, ios::out | ios::trunc | ios::binary);
     CHECK(proto_index.SerializeToOstream(&output));
