@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <opencv2/opencv.hpp>
+#include <glog/logging.h>
 
 #include "deep-relocalization/tensorflow-net.h"
 
@@ -15,6 +16,7 @@ int main() {
     TensorflowNet network(model_path, input_name, output_name);
 
     cv::Mat image = cv::imread(image_path);
+    CHECK_NOTNULL(image.data);
     cvtColor(image, image, cv::COLOR_RGB2GRAY);
 
     TensorflowNet::DescriptorType descriptor;
