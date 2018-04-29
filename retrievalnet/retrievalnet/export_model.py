@@ -1,10 +1,15 @@
 import yaml
 import argparse
+import logging
 from pathlib import Path
-import tensorflow as tf
 
-from retrievalnet.models import get_model
-from retrievalnet.settings import EXPER_PATH, DATA_PATH
+logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
+                    datefmt='%m/%d/%Y %H:%M:%S',
+                    level=logging.INFO)
+import tensorflow as tf  # noqa: E402
+
+from retrievalnet.models import get_model  # noqa: E402
+from retrievalnet.settings import EXPER_PATH, DATA_PATH  # noqa: E402
 
 
 if __name__ == '__main__':
