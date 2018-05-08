@@ -19,25 +19,42 @@
 
 #include "deep-relocalization/place-retrieval.h"
 
+DEFINE_uint64(
+        subsampling, 1, "Interval at which the frames should be indexed");
+DEFINE_bool(index_pose, false,
+        "Whether the fame pose (i.e. position vector and rotation matrix) should be"
+        "add to the index.");
+DEFINE_string(target_mission, "", "ID of the mission to be indexed.");
+
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
-        deep_relocalization::proto::DescriptorIndex* proto_index,
-        bool index_pose, unsigned subsampling) {
+        deep_relocalization::proto::DescriptorIndex* proto_index) {
     CHECK_NOTNULL(proto_index);
     proto_index->set_descriptor_size(network_.descriptor_size());
 
     vi_map::MissionIdList mission_ids;
-    map.getAllMissionIdsSortedByTimestamp(&mission_ids);
+    if(!FLAGS_target_mission.empty()) {
+        vi_map::MissionId target_mission;
+        map.ensureMissionIdValid(FLAGS_target_mission, &target_mission);
+        CHECK(target_mission.isValid());
+        mission_ids.push_back(target_mission);
+    } else {
+        map.getAllMissionIdsSortedByTimestamp(&mission_ids);
+        CHECK(!mission_ids.empty());
+    }
+
     for (const vi_map::MissionId& mission_id : mission_ids) {
         pose_graph::VertexIdList vertex_ids;
         map.getAllVertexIdsInMissionAlongGraph(mission_id, &vertex_ids);
+        CHECK(!vertex_ids.empty());
 
-        CHECK(vertex_ids.size());
-        unsigned num_indexed = 1 + (vertex_ids.size() - 1) / subsampling;
+        unsigned num_indexed = 1 + (vertex_ids.size() - 1) / FLAGS_subsampling;
         LOG(INFO) << "Computing " << num_indexed
                   << " descriptors for mission " << mission_id.printString();
         common::ProgressBar progress_bar(num_indexed);
-        for (int i = 0; i < vertex_ids.size(); i += subsampling) {
+
+        for (int i = 0; i < vertex_ids.size(); i += FLAGS_subsampling) {
+            progress_bar.increment();
             const pose_graph::VertexId& vertex_id = vertex_ids[i];
             const vi_map::Vertex& vertex = map.getVertex(vertex_id);
             if(!vertex.numFrames())
@@ -52,18 +69,27 @@ void PlaceRetrieval::BuildIndexFromMap(
             backend::ResourceIdSet resource_ids;
             vertex.getFrameResourceIdsOfType(
                     frame_index, backend::ResourceType::kRawImage, &resource_ids);
+            if(!resource_ids.size()) {
+                LOG(WARNING)
+                    << "Frame " << frame_index << " of vertex " << vertex_id
+                    << " had no resource, skipping.";
+                proto_index->mutable_frames()->RemoveLast();
+                continue;
+            }
             proto_frame->set_resource_name(resource_ids.begin()->hexString());
 
             cv::Mat image;
-            map.getRawImage(vertex, frame_index, &image);
+            CHECK(map.getRawImage(vertex, frame_index, &image))
+                << "Vertex " << vertex_id << " does not have a raw image for frame "
+                << frame_index;
             TensorflowNet::DescriptorType descriptor;
             descriptor.resize(network_.descriptor_size(), Eigen::NoChange);
             network_.PerformInference(image, &descriptor);
+            Eigen::MatrixXf generic_descriptor = descriptor;  // copy constructor crashes
             common::eigen_proto::serialize(
-                    Eigen::MatrixXf(descriptor),
-                    proto_frame->mutable_global_descriptor());
+                    generic_descriptor, proto_frame->mutable_global_descriptor());
 
-            if(index_pose) {
+            if(FLAGS_index_pose) {
                 aslam::Transformation transf = map.getVertex_T_G_I(vertex_id);
                 common::eigen_proto::serialize(
                         Eigen::MatrixXd(transf.getPosition()),
@@ -72,8 +98,6 @@ void PlaceRetrieval::BuildIndexFromMap(
                         Eigen::MatrixXd(transf.getRotationMatrix()),
                         proto_frame->mutable_rotation_matrix());
             }
-
-            progress_bar.increment();
         }
     }
 }
