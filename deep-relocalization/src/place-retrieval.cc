@@ -1,7 +1,11 @@
 #include <string>
 #include <math.h>
 
+#include "deep-relocalization/place-retrieval.h"
+
 #include <glog/logging.h>
+#include <opencv2/opencv.hpp>
+#include <Eigen/Core>
 
 #include <vi-map/vi-map.h>
 #include <vi-map/unique-id.h>
@@ -15,16 +19,14 @@
 #include <kindr/minimal/quat-transformation.h>
 #include <map-resources/resource-common.h>
 
-#include <opencv2/opencv.hpp>
-
-#include "deep-relocalization/place-retrieval.h"
-
 DEFINE_uint64(
-        subsampling, 1, "Interval at which the frames should be indexed");
-DEFINE_bool(index_pose, false,
-        "Whether the fame pose (i.e. position vector and rotation matrix) should be"
-        "add to the index.");
-DEFINE_string(target_mission, "", "ID of the mission to be indexed.");
+        subsampling, 1, "Interval at which the frames should be indexed.");
+DEFINE_bool(
+        index_pose, false,
+        "Whether the frame pose (i.e. position vector and rotation matrix) should be"
+        "added to the index.");
+DEFINE_string(
+        target_mission, "", "ID of the mission to be indexed.");
 
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
