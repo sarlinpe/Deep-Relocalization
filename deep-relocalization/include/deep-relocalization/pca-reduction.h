@@ -8,7 +8,7 @@ class PcaReduction {
     PcaReduction(const Eigen::MatrixXf& descriptors) {
         mean_ = descriptors.rowwise().mean();
         Eigen::MatrixXf centered = descriptors.colwise() - mean_;
-        Eigen::JacobiSVD<Eigen::MatrixXf> svd(centered);
+        Eigen::JacobiSVD<Eigen::MatrixXf> svd(centered, Eigen::ComputeFullU);
         projection_ = svd.matrixU().transpose();
     }
 
