@@ -6,3 +6,6 @@ tqdm
 pyyaml
 flake8
 jupyter
+matplotlib
+protobuf
+sklearn
