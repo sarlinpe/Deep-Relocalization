@@ -2,6 +2,7 @@
 #include <math.h>
 
 #include "deep-relocalization/place-retrieval.h"
+#include "deep-relocalization/pca-reduction.h"
 
 #include <glog/logging.h>
 #include <opencv2/opencv.hpp>
@@ -27,6 +28,17 @@ DEFINE_bool(
         "added to the index.");
 DEFINE_string(
         target_mission, "", "ID of the mission to be indexed.");
+DEFINE_bool(
+        use_pca, false,
+        "Whether a PCA projection matrix should be computed from the descriptors.");
+DEFINE_uint64(
+        pca_dims, 40, "The number of dimensions of the PCA projection.");
+
+PlaceRetrieval::PlaceRetrieval(const std::string model_path):
+        network_(model_path, "image", "descriptor") {
+    unsigned index_dims = FLAGS_use_pca ? FLAGS_pca_dims : network_.descriptor_size();
+    index_.reset(new KDTreeIndex(index_dims));
+}
 
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
@@ -108,6 +120,10 @@ void PlaceRetrieval::LoadIndex(
         const deep_relocalization::proto::DescriptorIndex& proto_index) {
     CHECK_EQ(proto_index.descriptor_size(), network_.descriptor_size());
 
+    KDTreeIndex::DescriptorMatrixType descriptors(
+            network_.descriptor_size(), proto_index.frames().size());
+    unsigned i = 0;
+
     LOG(INFO) << "Loading " << proto_index.frames_size()
               << " reference descriptors into index.";
     common::ProgressBar progress_bar(proto_index.frames_size());
@@ -121,10 +137,16 @@ void PlaceRetrieval::LoadIndex(
         KDTreeIndex::DescriptorMatrixType descriptor;
         common::eigen_proto::deserialize(proto_frame.global_descriptor(), &descriptor);
         CHECK_EQ(descriptor.rows(), network_.descriptor_size());
-        index_->AddDescriptors(descriptor);
 
+        descriptors.col(i++) = descriptor;
         progress_bar.increment();
     }
+
+    if(FLAGS_use_pca) {
+        pca_reduction_.reset(new PcaReduction(descriptors));
+        pca_reduction_->project(&descriptors, FLAGS_pca_dims);
+    }
+    index_->AddDescriptors(descriptors);
     index_->RefreshIndex();
 }
 
@@ -138,13 +160,20 @@ void PlaceRetrieval::RetrieveNearestNeighbors(
     network_.PerformInference(input_image, &descriptor);
     timer_inference.Stop();
 
+
+    KDTreeIndex::DescriptorMatrixType descriptor_matrix(descriptor);
+    if(FLAGS_use_pca) {
+        CHECK_NOTNULL(pca_reduction_);
+        pca_reduction_->project(&descriptor_matrix, FLAGS_pca_dims);
+    }
+
     Eigen::MatrixXi indices;
     indices.resize(num_neighbors, 1);
     Eigen::MatrixXf distances;
     distances.resize(num_neighbors, 1);
     timing::Timer timer_get_nn("Deep Relocalization: Get neighbors");
     index_->GetNNearestNeighbors(
-            descriptor, num_neighbors, &indices, &distances, max_distance);
+            descriptor_matrix, num_neighbors, &indices, &distances, max_distance);
     timer_get_nn.Stop();
 
     for (unsigned nn_search_idx = 0; nn_search_idx < num_neighbors; ++nn_search_idx) {

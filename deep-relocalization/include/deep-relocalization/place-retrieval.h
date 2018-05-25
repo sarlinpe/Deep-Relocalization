@@ -10,14 +10,12 @@
 
 #include "deep-relocalization/tensorflow-net.h"
 #include "deep-relocalization/kd-tree-index.h"
+#include "deep-relocalization/pca-reduction.h"
 #include "deep-relocalization/descriptor_index.pb.h"
 
 class PlaceRetrieval {
   public:
-    PlaceRetrieval(const std::string model_path):
-            network_(model_path, "image", "descriptor") {
-        index_.reset(new KDTreeIndex(network_.descriptor_size()));
-    }
+    PlaceRetrieval(const std::string model_path);
 
     void BuildIndexFromMap(
             const vi_map::VIMap& map,
@@ -33,6 +31,7 @@ class PlaceRetrieval {
   private:
     TensorflowNet network_;
     std::unique_ptr<KDTreeIndex> index_;
+    std::unique_ptr<PcaReduction> pca_reduction_;
     vi_map::VisualFrameIdentifierList indexed_frame_identifiers_;
 };
 
