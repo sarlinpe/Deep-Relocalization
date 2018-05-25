@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <mutex>
 
 #include <opencv2/opencv.hpp>
 #include <vi-map/vi-map.h>
@@ -30,6 +31,7 @@ class PlaceRetrieval {
 
   private:
     TensorflowNet network_;
+    std::mutex network_mutex_;
     std::unique_ptr<KDTreeIndex> index_;
     std::unique_ptr<PcaReduction> pca_reduction_;
     vi_map::VisualFrameIdentifierList indexed_frame_identifiers_;

@@ -156,9 +156,11 @@ void PlaceRetrieval::RetrieveNearestNeighbors(
         vi_map::VisualFrameIdentifierList* retrieved_frame_identifiers) {
     TensorflowNet::DescriptorType descriptor;
     descriptor.resize(network_.descriptor_size(), Eigen::NoChange);
+    network_mutex_.lock();
     timing::Timer timer_inference("Deep Relocalization: Compute descriptor");
     network_.PerformInference(input_image, &descriptor);
     timer_inference.Stop();
+    network_mutex_.unlock();
 
 
     KDTreeIndex::DescriptorMatrixType descriptor_matrix(descriptor);
