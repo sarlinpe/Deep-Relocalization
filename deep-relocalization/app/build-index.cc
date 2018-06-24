@@ -11,14 +11,9 @@
 
 using namespace std;
 
-DEFINE_string(
-        map_name, "euroc_ml1",
-        "Name of the map in `maps/`.");
-DEFINE_string(
-        model_name, "resnet50_delf_vlad_triplets_margin-02_proj-40_sq",
-        "Name of the Tensorflow model in `models/`.");
-DEFINE_string(proto_name, "euroc_ml1_proto.pb",
-        "Name of the exported index protobuf in `data/`.");
+DEFINE_string(map_path, "", "Path to the map.");
+DEFINE_string(model_name, "", "Name of the Tensorflow model in `models/`.");
+DEFINE_string(proto_name, "", "Name of the index protobuf in `data/`.");
 
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
@@ -27,7 +22,11 @@ int main(int argc, char** argv) {
     FLAGS_alsologtostderr = true;
     FLAGS_colorlogtostderr = true;
 
-    string map_path = string(MAP_ROOT_PATH) + FLAGS_map_name;
+    CHECK(!FLAGS_map_path.empty());
+    CHECK(!FLAGS_model_name.empty());
+    CHECK(!FLAGS_proto_name.empty());
+
+    string map_path = FLAGS_map_path;
     string model_path = string(MODEL_ROOT_PATH) + FLAGS_model_name;
     string proto_path = string(DATA_ROOT_PATH) + FLAGS_proto_name;
 
@@ -36,7 +35,7 @@ int main(int argc, char** argv) {
 
     deep_relocalization::proto::DescriptorIndex proto_index;
     proto_index.set_model_name(FLAGS_model_name);
-    proto_index.set_data_name(FLAGS_map_name);
+    proto_index.set_data_name(FLAGS_map_path);
 
     PlaceRetrieval retrieval(model_path);
     retrieval.BuildIndexFromMap(map, &proto_index);

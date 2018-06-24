@@ -21,6 +21,8 @@ add_definitions(-DMAP_ROOT_PATH="${CMAKE_SOURCE_DIR}/maps/")
 # Executables
 cs_add_executable(build_index app/build-index.cc)
 target_link_libraries(build_index ${PROJECT_NAME})
+cs_add_executable(time_query app/time-query.cc)
+target_link_libraries(time_query ${PROJECT_NAME})
 
 # Test files
 cs_add_executable(test_opencv test/test_opencv.cc)
@@ -30,8 +32,6 @@ cs_add_executable(test_build_index test/test_build_index.cc)
 target_link_libraries(test_build_index ${PROJECT_NAME})
 cs_add_executable(test_query_index test/test_query_index.cc)
 target_link_libraries(test_query_index ${PROJECT_NAME})
-cs_add_executable(test_time_query test/test_time_query.cc)
-target_link_libraries(test_time_query ${PROJECT_NAME})
 
 cs_install()
 cs_export()
