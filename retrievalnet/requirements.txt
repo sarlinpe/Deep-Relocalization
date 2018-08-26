@@ -9,3 +9,4 @@ jupyter
 matplotlib
 protobuf
 sklearn
+pillow

@@ -3,10 +3,7 @@ from tensorflow.contrib import slim
 
 from .base_model import BaseModel, Mode
 from .backbones import resnet_v1 as resnet
-
-
-def normalize_image(image, pixel_value_offset=128.0, pixel_value_scale=128.0):
-    return tf.div(tf.subtract(image, pixel_value_offset), pixel_value_scale)
+from .layers import delf_attention, image_normalization, dimensionality_reduction
 
 
 class Delf(BaseModel):
@@ -18,45 +15,42 @@ class Delf(BaseModel):
             'normalize_input': False,
             'use_attention': False,
             'attention_kernel': 1,
+            'normalize_feature_map': True,
             'normalize_average': True,
-            'normalize_feature_map': True
+            'dimensionality_reduction': None,
+            'proj_regularizer': 0.,
     }
 
-    def _model(self, inputs, mode, **config):
-        image = inputs['image']
+    @staticmethod
+    def tower(image, mode, config):
+        image = image_normalization(image)
         if image.shape[-1] == 1:
             image = tf.tile(image, [1, 1, 1, 3])
-        if config['normalize_input']:
-            image = normalize_image(image)
 
         with slim.arg_scope(resnet.resnet_arg_scope()):
-            _, encoder = resnet.resnet_v1_50(image,
-                                             is_training=(mode == Mode.TRAIN),
-                                             global_pool=False,
-                                             scope='resnet_v1_50')
+            is_training = config['train_backbone'] and (mode == Mode.TRAIN)
+            with slim.arg_scope([slim.conv2d, slim.batch_norm], trainable=is_training):
+                _, encoder = resnet.resnet_v1_50(image,
+                                                 is_training=is_training,
+                                                 global_pool=False,
+                                                 scope='resnet_v1_50')
         feature_map = encoder['resnet_v1_50/block3']
 
         if config['use_attention']:
-            with tf.variable_scope('attonly/attention/compute'):
-                with slim.arg_scope(resnet.resnet_arg_scope()):
-                    with slim.arg_scope([slim.batch_norm],
-                                        is_training=(mode == Mode.TRAIN)):
-                        attention = slim.conv2d(
-                                feature_map, 512, config['attention_kernel'], rate=1,
-                                activation_fn=tf.nn.relu, scope='conv1')
-                        attention = slim.conv2d(
-                                attention, 1, config['attention_kernel'], rate=1,
-                                activation_fn=None, normalizer_fn=None, scope='conv2')
-                        attention = tf.nn.softplus(attention)
-            if config['normalize_feature_map']:
-                feature_map = tf.nn.l2_normalize(feature_map, -1)
-            descriptor = tf.reduce_sum(feature_map*attention, axis=[1, 2])
-            if config['normalize_average']:
-                descriptor /= tf.reduce_sum(attention, axis=[1, 2])
+            descriptor = delf_attention(feature_map, config, mode == Mode.TRAIN,
+                                        resnet.resnet_arg_scope())
         else:
             descriptor = tf.reduce_max(feature_map, [1, 2])
 
-        return {'descriptor': descriptor}
+        if config['dimensionality_reduction']:
+            descriptor = dimensionality_reduction(descriptor, config)
+        return descriptor
+
+    def _model(self, inputs, mode, **config):
+        # This model does not support training
+        config['train_backbone'] = False
+        config['train_attention'] = False
+        return {'descriptor': self.tower(inputs['image'], mode, config)}
 
     def _loss(self, outputs, inputs, **config):
         raise NotImplementedError

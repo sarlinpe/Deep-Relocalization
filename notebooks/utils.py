@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 
 
-def plot_imgs(imgs, titles=None, cmap='brg', ylabel='', normalize=False, ax=None, dpi=100):
+def plot_imgs(imgs, titles=None, cmap='brg', ylabel='', normalize=True, ax=None,
+              r=(0, 1), dpi=100):
     n = len(imgs)
     if not isinstance(cmap, list):
         cmap = [cmap]*n
@@ -14,11 +15,16 @@ def plot_imgs(imgs, titles=None, cmap='brg', ylabel='', normalize=False, ax=None
             ax = [ax]
         assert len(ax) == len(imgs)
     for i in range(n):
-        if imgs[i].shape[-1] == 3:
-            imgs[i] = imgs[i][..., ::-1]  # BGR to RGB
+        if len(imgs[i].shape) == 3:
+            if imgs[i].shape[-1] == 3:
+                imgs[i] = imgs[i][..., ::-1]  # BGR to RGB
+            elif imgs[i].shape[-1] == 1:
+                imgs[i] = imgs[i][..., 0]
+        if len(imgs[i].shape) == 2 and cmap[i] == 'brg':
+            cmap[i] = 'gray'
         ax[i].imshow(imgs[i], cmap=plt.get_cmap(cmap[i]),
-                     vmin=None if normalize else 0,
-                     vmax=None if normalize else 1)
+                     vmin=None if normalize else r[0],
+                     vmax=None if normalize else r[1])
         if titles:
             ax[i].set_title(titles[i])
         ax[i].get_yaxis().set_ticks([])

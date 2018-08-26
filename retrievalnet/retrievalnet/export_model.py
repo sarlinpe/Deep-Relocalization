@@ -23,7 +23,7 @@ if __name__ == '__main__':
         config = yaml.load(f)
 
     export_dir = Path(EXPER_PATH, 'saved_models', export_name)
-    # export_dir.mkdir(parents=True, exist_ok=True)
+    export_dir.mkdir(parents=True, exist_ok=True)
 
     if Path(EXPER_PATH, export_name).exists():
         checkpoint_path = Path(EXPER_PATH, export_name)
