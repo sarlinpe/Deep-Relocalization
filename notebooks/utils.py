@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 
 
 def plot_imgs(imgs, titles=None, cmap='brg', ylabel='', normalize=True, ax=None,
-              r=(0, 1)):
+              r=(0, 1), dpi=100):
     n = len(imgs)
     if not isinstance(cmap, list):
         cmap = [cmap]*n
     if ax is None:
-        _, ax = plt.subplots(1, n, figsize=(6*n, 6), dpi=100)
+        _, ax = plt.subplots(1, n, figsize=(6*n, 6), dpi=dpi)
         if n == 1:
             ax = [ax]
     else:
