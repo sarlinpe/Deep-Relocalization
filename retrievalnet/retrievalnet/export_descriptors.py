@@ -10,53 +10,64 @@ logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
                     level=logging.INFO)
 from retrievalnet.models import get_model  # noqa: E402
 from retrievalnet.datasets import get_dataset  # noqa: E402
+from retrievalnet.utils import tools  # noqa: E402
 from retrievalnet.settings import EXPER_PATH, DATA_PATH  # noqa: E402
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str)
     parser.add_argument('export_name', type=str)
+    parser.add_argument('--as_dataset', action='store_true')
     args = parser.parse_args()
 
     export_name = args.export_name
     with open(args.config, 'r') as f:
         config = yaml.load(f)
-    seqs = config['data']['test_seq']
 
-    if not isinstance(seqs, list):
-        seqs = [seqs]
+    if args.as_dataset:
+        base_dir = Path(DATA_PATH, export_name)
+    else:
+        base_dir = Path(EXPER_PATH, 'exports', export_name)
+    base_dir.mkdir(parents=True, exist_ok=True)
 
     if Path(EXPER_PATH, export_name).exists():
+        with open(Path(EXPER_PATH, export_name, 'config.yml'), 'r') as f:
+            config = tools.dict_update(yaml.load(f), config)
         checkpoint_path = Path(EXPER_PATH, export_name)
-        if 'weights' in config:
+        if config.get('weights', None):
             checkpoint_path = Path(checkpoint_path, config['weights'])
     else:
+        assert 'weights' in config, (
+                'Experiment name not found, weights must be provided.')
         checkpoint_path = Path(DATA_PATH, 'weights', config['weights'])
 
     with get_model(config['model']['name'])(
             data_shape={'image': [None, None, None, config['model']['image_channels']]},
             **config['model']) as net:
         net.load(str(checkpoint_path))
+        dataset = get_dataset(config['data']['name'])(**config['data'])
+        test_set = dataset.get_test_set()
 
-        for seq in tqdm(seqs):
-            output_dir = Path(EXPER_PATH, 'outputs/{}/{}/'.format(export_name, seq))
-            output_dir.mkdir(parents=True, exist_ok=True)
+        output_dirs = set()
+        pbar = tqdm()
+        while True:
+            try:
+                data = next(test_set)
+            except dataset.end_set:
+                break
+            descriptor = net.predict(data, keys='descriptor')
 
-            config['data']['test_seq'] = seq
-            dataset = get_dataset(config['data']['name'])(**config['data'])
-            test_set = dataset.get_test_set()
+            # In the case of nclt, we have different subdirectories, one per sequence
+            output_dir = base_dir
+            name = data['name'].decode('utf-8')
+            if '/' in name:
+                output_dir = Path(output_dir, Path(name).parent).as_posix()
+                if output_dir not in output_dirs:
+                    Path(output_dir).mkdir()
+                    output_dirs.add(output_dir)
+                name = Path(name).name
 
-            pbar = tqdm()
-            while True:
-                try:
-                    data = next(test_set)
-                except dataset.end_set:
-                    break
-                descriptor = net.predict(data, keys='descriptor')
-                filepath = Path(output_dir, '{}.npz'.format(
-                        data['name'].decode('utf-8')))
-                np.savez_compressed(filepath, descriptor=descriptor)
-                pbar.update(1)
-            pbar.close()
+            np.save(Path(output_dir, '{}.npy'.format(name)), descriptor)
+            pbar.update(1)
+        pbar.close()
