@@ -42,18 +42,6 @@ def evaluate(config, output_dir, n_iter=None):
     return results
 
 
-def predict(config, output_dir, n_iter):
-    pred = []
-    data = []
-    with _init_graph(config, with_dataset=True) as (net, dataset):
-        net.load(output_dir)
-        test_set = dataset.get_test_set()
-        for _ in range(n_iter):
-            data.append(next(test_set))
-            pred.append(net.predict(data[-1], keys='*'))
-    return pred, data
-
-
 def set_seed(seed):
     tf.set_random_seed(seed)
     np.random.seed(seed)
@@ -107,12 +95,6 @@ def _cli_eval(config, output_dir, args):
         f.write('\n')
 
 
-# TODO
-def _cli_pred(config, output_dir, args):
-    print(predict(config, output_dir, 2))
-    # raise NotImplementedError
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command')
@@ -125,16 +107,10 @@ if __name__ == '__main__':
     p_train.set_defaults(func=_cli_train)
 
     # Evaluation command
-    p_train = subparsers.add_parser('evaluate')
-    p_train.add_argument('config', type=str)
-    p_train.add_argument('exper_name', type=str)
-    p_train.set_defaults(func=_cli_eval)
-
-    # Inference command
-    p_train = subparsers.add_parser('predict')
-    p_train.add_argument('config', type=str)
-    p_train.add_argument('exper_name', type=str)
-    p_train.set_defaults(func=_cli_pred)
+    p_eval = subparsers.add_parser('evaluate')
+    p_eval.add_argument('config', type=str)
+    p_eval.add_argument('exper_name', type=str)
+    p_eval.set_defaults(func=_cli_eval)
 
     args = parser.parse_args()
     with open(args.config, 'r') as f:

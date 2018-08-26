@@ -118,7 +118,6 @@ class BaseModel(metaclass=ABCMeta):
         if data_shape is None:
             self.data_shape = {i: s['shape'] for i, s in self.input_spec.items()}
 
-        # with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
         with tf.variable_scope('', reuse=tf.AUTO_REUSE):
             self._build_graph()
 
@@ -358,7 +357,10 @@ class BaseModel(metaclass=ABCMeta):
     def _checkpoint_var_search(self, checkpoint_path):
         reader = tf.train.NewCheckpointReader(checkpoint_path)
         saved_shapes = reader.get_variable_to_shape_map()
-        model_names = set([v.name.split(':')[0] for v in tf.model_variables()])
+        model_names = tf.model_variables()  # Used by tf.slim layers
+        if not len(tf.model_variables()):
+            model_names = tf.global_variables()  # Fallback when slim is not used
+        model_names = set([v.name.split(':')[0] for v in model_names])
         checkpoint_names = set(saved_shapes.keys())
         found_names = model_names & checkpoint_names
         missing_names = model_names - checkpoint_names
@@ -366,6 +368,8 @@ class BaseModel(metaclass=ABCMeta):
         restored = []
         with tf.variable_scope('', reuse=True):
             for name in found_names:
+                # print(tf.global_variables())
+                # print(name, name in model_names, name in checkpoint_names)
                 var = tf.get_variable(name)
                 var_shape = var.get_shape().as_list()
                 if var_shape == saved_shapes[name]:

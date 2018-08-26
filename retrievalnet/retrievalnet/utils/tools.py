@@ -11,6 +11,7 @@ def dict_update(d, u):
     Returns:
         The updated dictionary.
     """
+    d = d.copy()
     for k, v in u.items():
         if isinstance(v, collections.Mapping):
             d[k] = dict_update(d.get(k, {}), v)
