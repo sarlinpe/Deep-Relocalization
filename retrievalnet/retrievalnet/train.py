@@ -35,13 +35,6 @@ def train(config, n_iter, output_dir, checkpoint_name='model.ckpt'):
         net.save(checkpoint_path)
 
 
-def evaluate(config, output_dir, n_iter=None):
-    with _init_graph(config) as net:
-        net.load(output_dir)
-        results = net.evaluate(config.get('eval_set', 'test'), max_iterations=n_iter)
-    return results
-
-
 def set_seed(seed):
     tf.set_random_seed(seed)
     np.random.seed(seed)
@@ -65,52 +58,18 @@ def _init_graph(config, with_dataset=False):
     tf.reset_default_graph()
 
 
-def _cli_train(config, output_dir, args):
+def _cli_train(config, output_dir):
     assert 'train_iter' in config
 
     with open(os.path.join(output_dir, 'config.yml'), 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
     train(config, config['train_iter'], output_dir)
 
-    if args.eval:
-        _cli_eval(config, output_dir, args)
-
-
-def _cli_eval(config, output_dir, args):
-    # Load model config from previous experiment
-    with open(os.path.join(output_dir, 'config.yml'), 'r') as f:
-        model_config = yaml.load(f)['model']
-    model_config.update(config.get('model', {}))
-    config['model'] = model_config
-
-    results = evaluate(config, output_dir, n_iter=config.get('eval_iter'))
-
-    # Print and export results
-    logging.info('Evaluation results: \n{}'.format(
-        pprint(results, indent=2, default=str)))
-    with open(os.path.join(output_dir, 'eval.txt'), 'a') as f:
-        f.write('Evaluation for {} dataset:\n'.format(config['data']['name']))
-        for r, v in results.items():
-            f.write('\t{}:\n\t\t{}\n'.format(r, v))
-        f.write('\n')
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='command')
-
-    # Training command
-    p_train = subparsers.add_parser('train')
-    p_train.add_argument('config', type=str)
-    p_train.add_argument('exper_name', type=str)
-    p_train.add_argument('--eval', action='store_true')
-    p_train.set_defaults(func=_cli_train)
-
-    # Evaluation command
-    p_eval = subparsers.add_parser('evaluate')
-    p_eval.add_argument('config', type=str)
-    p_eval.add_argument('exper_name', type=str)
-    p_eval.set_defaults(func=_cli_eval)
+    parser.add_argument('config', type=str)
+    parser.add_argument('exper_name', type=str)
 
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -120,5 +79,4 @@ if __name__ == '__main__':
         os.mkdir(output_dir)
 
     with capture_outputs(os.path.join(output_dir, 'log')):
-        logging.info('Running command {}'.format(args.command.upper()))
-        args.func(config, output_dir, args)
+        _cli_train(config, output_dir)
