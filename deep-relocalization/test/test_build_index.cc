@@ -9,9 +9,9 @@
 using namespace std;
 
 int main () {
-    string map_path = string(MAP_ROOT_PATH) + "euroc_ml1";
-    string model_path = string(MODEL_ROOT_PATH)
-                        + "resnet50_delf_vlad_triplets_margin-02_proj-40_sq/";
+    string map_path = string(MAP_ROOT_PATH)
+        + "lindenhof_afternoon-wet_aligned_deep-reloc_ext-int-3/";
+    string model_path = string(MODEL_ROOT_PATH) + "mobilenetvlad_depth-0.35";
 
     deep_relocalization::proto::DescriptorIndex proto_index;
 

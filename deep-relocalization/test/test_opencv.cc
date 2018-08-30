@@ -6,7 +6,7 @@
 using namespace std;
 
 int main () {
-    string image_path = string(DATA_ROOT_PATH) + "nclt_sample.jpg";
+    string image_path = string(DATA_ROOT_PATH) + "images/tango_wet_sample.jpg";
     cout << image_path << endl;
     cv::Mat image = cv::imread(image_path);
     if(!image.data) {

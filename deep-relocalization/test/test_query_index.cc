@@ -12,10 +12,11 @@
 using namespace std;
 
 int main () {
-    string model_name = "resnet50_delf_vlad_triplets_margin-02_proj-40_sq";
+    string model_name = "mobilenetvlad_depth-0.35";
     string model_path = string(MODEL_ROOT_PATH) + model_name;
-    string proto_path = string(DATA_ROOT_PATH) + "euroc_ml1_proto.pb";
-    string query_path = string(DATA_ROOT_PATH) + "euroc_sample.pgm";
+    string proto_path = string(DATA_ROOT_PATH)
+        + "lindenhof_wet_aligned_mobilenet-d0.35.pb";
+    string query_path = string(DATA_ROOT_PATH) + "images/tango_afternoon_sample.jpg";
 
     PlaceRetrieval retrieval(model_path);
 
