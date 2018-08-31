@@ -6,8 +6,8 @@
 #include <gflags/gflags.h>
 #include <vi-map/vi-map.h>
 
-#include "deep-relocalization/descriptor_index.pb.h"
-#include "deep-relocalization/place-retrieval.h"
+#include "global-loc/descriptor_index.pb.h"
+#include "global-loc/place-retrieval.h"
 
 using namespace std;
 
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     vi_map::VIMap map;
     CHECK(map.loadFromFolder(map_path)) << "Loading of the vi-map failed.";
 
-    deep_relocalization::proto::DescriptorIndex proto_index;
+    global_loc::proto::DescriptorIndex proto_index;
     proto_index.set_model_name(FLAGS_model_name);
     proto_index.set_data_name(FLAGS_map_path);
 

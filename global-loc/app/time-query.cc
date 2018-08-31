@@ -9,8 +9,8 @@
 #include <maplab-common/progress-bar.h>
 #include <map-resources/resource-common.h>
 
-#include "deep-relocalization/descriptor_index.pb.h"
-#include "deep-relocalization/place-retrieval.h"
+#include "global-loc/descriptor_index.pb.h"
+#include "global-loc/place-retrieval.h"
 
 using namespace std;
 
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     PlaceRetrieval retrieval(model_path);
 
     // Load index
-    deep_relocalization::proto::DescriptorIndex proto_index;
+    global_loc::proto::DescriptorIndex proto_index;
     fstream input(index_path, ios::in | ios::binary);
     CHECK(proto_index.ParseFromIstream(&input));
     CHECK_EQ(FLAGS_model_name, proto_index.model_name());

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <package format="2">
-  <name>deep_relocalization</name>
+  <name>global_loc</name>
   <version>0.0.0</version>
-  <description>The deep_relocalization package</description>
+  <description>The global_loc package</description>
   <maintainer email="psarlin@student.ethz.ch">Paul-Edouard Sarlin</maintainer>
   <maintainer email="fdebrain@student.ethz.ch">Frederic Debraine</maintainer>
   <license>Apache 2.0</license>

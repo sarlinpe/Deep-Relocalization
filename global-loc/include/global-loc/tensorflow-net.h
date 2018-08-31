@@ -1,5 +1,5 @@
-#ifndef DEEP_RELOCALIZATION_TENSORFLOW_NET_H_
-#define DEEP_RELOCALIZATION_TENSORFLOW_NET_H_
+#ifndef GLOBAL_LOC_TENSORFLOW_NET_H_
+#define GLOBAL_LOC_TENSORFLOW_NET_H_
 
 #include <vector>
 #include <memory>
@@ -107,4 +107,4 @@ class TensorflowNet {
     const std::string output_name_;
 };
 
-#endif  // DEEP_RELOCALIZATION_TENSORFLOW_NET_H_
+#endif  // GLOBAL_LOC_TENSORFLOW_NET_H_

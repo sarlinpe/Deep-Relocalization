@@ -1,5 +1,5 @@
-#ifndef DEEP_RELOCALIZATION_PLACE_RETRIEVAL_H_
-#define DEEP_RELOCALIZATION_PLACE_RETRIEVAL_H_
+#ifndef GLOBAL_LOC_PLACE_RETRIEVAL_H_
+#define GLOBAL_LOC_PLACE_RETRIEVAL_H_
 
 #include <memory>
 #include <vector>
@@ -9,10 +9,10 @@
 #include <vi-map/vi-map.h>
 #include <vi-map/unique-id.h>
 
-#include "deep-relocalization/tensorflow-net.h"
-#include "deep-relocalization/kd-tree-index.h"
-#include "deep-relocalization/pca-reduction.h"
-#include "deep-relocalization/descriptor_index.pb.h"
+#include "global-loc/tensorflow-net.h"
+#include "global-loc/kd-tree-index.h"
+#include "global-loc/pca-reduction.h"
+#include "global-loc/descriptor_index.pb.h"
 
 class PlaceRetrieval {
   public:
@@ -20,9 +20,9 @@ class PlaceRetrieval {
 
     void BuildIndexFromMap(
             const vi_map::VIMap& map,
-            deep_relocalization::proto::DescriptorIndex* proto_index);
+            global_loc::proto::DescriptorIndex* proto_index);
 
-    void LoadIndex(const deep_relocalization::proto::DescriptorIndex& proto_index);
+    void LoadIndex(const global_loc::proto::DescriptorIndex& proto_index);
 
     void RetrieveNearestNeighbors(
             const cv::Mat& input_image, const unsigned num_neighbors,
@@ -37,4 +37,4 @@ class PlaceRetrieval {
     vi_map::VisualFrameIdentifierList indexed_frame_identifiers_;
 };
 
-#endif  // DEEP_RELOCALIZATION_PLACE_RETRIEVAL_H_
+#endif  // GLOBAL_LOC_PLACE_RETRIEVAL_H_

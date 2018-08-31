@@ -1,5 +1,5 @@
-#ifndef DEEP_RELOCALIZATION_KD_TREE_INDEX_H_
-#define DEEP_RELOCALIZATION_KD_TREE_INDEX_H_
+#ifndef GLOBAL_LOC_KD_TREE_INDEX_H_
+#define GLOBAL_LOC_KD_TREE_INDEX_H_
 
 #include <algorithm>
 #include <functional>
@@ -106,4 +106,4 @@ class KDTreeIndex {
     const unsigned descriptor_size_;
 };
 
-#endif // DEEP_RELOCALIZATION_KD_TREE_INDEX_H_
+#endif // GLOBAL_LOC_KD_TREE_INDEX_H_

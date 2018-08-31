@@ -6,8 +6,8 @@
 #include <vi-map/unique-id.h>
 #include <aslam/common/timer.h>
 
-#include "deep-relocalization/descriptor_index.pb.h"
-#include "deep-relocalization/place-retrieval.h"
+#include "global-loc/descriptor_index.pb.h"
+#include "global-loc/place-retrieval.h"
 
 using namespace std;
 
@@ -20,7 +20,7 @@ int main () {
 
     PlaceRetrieval retrieval(model_path);
 
-    deep_relocalization::proto::DescriptorIndex proto_index;
+    global_loc::proto::DescriptorIndex proto_index;
     fstream input(proto_path, ios::in | ios::binary);
     CHECK(proto_index.ParseFromIstream(&input));
     CHECK_EQ(model_name, proto_index.model_name());

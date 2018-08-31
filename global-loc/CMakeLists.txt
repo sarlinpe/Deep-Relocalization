@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(deep_relocalization)
+project(global_loc)
 
 find_package(catkin_simple REQUIRED)
 catkin_simple()
@@ -9,7 +9,7 @@ set(SOURCES
 )
 
 # Protobufs
-set(PROTO_DEFNS proto/deep-relocalization/descriptor_index.proto)
+set(PROTO_DEFNS proto/global-loc/descriptor_index.proto)
 PROTOBUF_CATKIN_GENERATE_CPP2("proto" PROTO_SRCS PROTO_HDRS ${PROTO_DEFNS})
 cs_add_library(${PROJECT_NAME} ${SOURCES} ${PROTO_SRCS} ${PROTO_HDRS})
 

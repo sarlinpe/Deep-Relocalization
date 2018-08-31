@@ -1,5 +1,5 @@
-#ifndef DEEP_RELOCALIZATION_PCA_REDUCTION_H_
-#define DEEP_RELOCALIZATION_PCA_REDUCTION_H_
+#ifndef GLOBAL_LOC_PCA_REDUCTION_H_
+#define GLOBAL_LOC_PCA_REDUCTION_H_
 
 #include <Eigen/Core>
 
@@ -27,4 +27,4 @@ class PcaReduction {
     Eigen::MatrixXf projection_;
 };
 
-#endif  // DEEP_RELOCALIZATION_PCA_REDUCTION_H_
+#endif  // GLOBAL_LOC_PCA_REDUCTION_H_

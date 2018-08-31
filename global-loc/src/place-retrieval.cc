@@ -1,8 +1,8 @@
 #include <string>
 #include <math.h>
 
-#include "deep-relocalization/place-retrieval.h"
-#include "deep-relocalization/pca-reduction.h"
+#include "global-loc/place-retrieval.h"
+#include "global-loc/pca-reduction.h"
 
 #include <glog/logging.h>
 #include <opencv2/opencv.hpp>
@@ -42,7 +42,7 @@ PlaceRetrieval::PlaceRetrieval(const std::string model_path):
 
 void PlaceRetrieval::BuildIndexFromMap(
         const vi_map::VIMap& map,
-        deep_relocalization::proto::DescriptorIndex* proto_index) {
+        global_loc::proto::DescriptorIndex* proto_index) {
     CHECK_NOTNULL(proto_index);
     proto_index->set_descriptor_size(network_.descriptor_size());
 
@@ -76,7 +76,7 @@ void PlaceRetrieval::BuildIndexFromMap(
 
             unsigned frame_index = 0;  // Add only the first frame
 
-            deep_relocalization::proto::DescriptorIndex::Frame* proto_frame =
+            global_loc::proto::DescriptorIndex::Frame* proto_frame =
                     proto_index->add_frames();
             vertex_id.serialize(proto_frame->mutable_vertex_id());
             proto_frame->set_frame_index(frame_index);
@@ -117,7 +117,7 @@ void PlaceRetrieval::BuildIndexFromMap(
 }
 
 void PlaceRetrieval::LoadIndex(
-        const deep_relocalization::proto::DescriptorIndex& proto_index) {
+        const global_loc::proto::DescriptorIndex& proto_index) {
     CHECK_EQ(proto_index.descriptor_size(), network_.descriptor_size());
 
     KDTreeIndex::DescriptorMatrixType descriptors(
@@ -127,7 +127,7 @@ void PlaceRetrieval::LoadIndex(
     LOG(INFO) << "Loading " << proto_index.frames_size()
               << " reference descriptors into index.";
     common::ProgressBar progress_bar(proto_index.frames_size());
-    for (const deep_relocalization::proto::DescriptorIndex::Frame& proto_frame :
+    for (const global_loc::proto::DescriptorIndex::Frame& proto_frame :
             proto_index.frames()) {
         pose_graph::VertexId vertex_id;
         vertex_id.deserialize(proto_frame.vertex_id());

@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <glog/logging.h>
 
-#include "deep-relocalization/tensorflow-net.h"
+#include "global-loc/tensorflow-net.h"
 
 using namespace std;
 

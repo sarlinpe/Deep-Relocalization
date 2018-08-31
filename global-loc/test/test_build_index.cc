@@ -3,8 +3,8 @@
 
 #include <vi-map/vi-map.h>
 
-#include "deep-relocalization/descriptor_index.pb.h"
-#include "deep-relocalization/place-retrieval.h"
+#include "global-loc/descriptor_index.pb.h"
+#include "global-loc/place-retrieval.h"
 
 using namespace std;
 
@@ -13,7 +13,7 @@ int main () {
         + "lindenhof_afternoon-wet_aligned_deep-reloc_ext-int-3/";
     string model_path = string(MODEL_ROOT_PATH) + "mobilenetvlad_depth-0.35";
 
-    deep_relocalization::proto::DescriptorIndex proto_index;
+    global_loc::proto::DescriptorIndex proto_index;
 
     vi_map::VIMap map;
     CHECK(map.loadFromFolder(map_path)) << "Loading of the vi-map failed.";

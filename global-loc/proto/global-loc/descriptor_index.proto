@@ -1,5 +1,5 @@
 syntax = "proto2";
-package deep_relocalization.proto;
+package global_loc.proto;
 
 import "maplab-common/id.proto";
 import "maplab-common/eigen.proto";
