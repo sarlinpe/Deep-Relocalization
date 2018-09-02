@@ -8,7 +8,7 @@
 using namespace std;
 
 int main() {
-    string model_path = string(MODEL_ROOT_PATH + "mobilenetvlad_depth-0.35";
+    string model_path = string(MODEL_ROOT_PATH) + "mobilenetvlad_depth-0.35";
     string image_path = string(DATA_ROOT_PATH) + "images/tango_wet_sample.jpg";
     string input_name = "image", output_name = "descriptor";
 
