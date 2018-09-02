@@ -11,7 +11,7 @@
 
 using namespace std;
 
-DEFINE_string(map_path, "", "Path to the map.");
+DEFINE_string(map_name, "", "Name to the map in `maps/`.");
 DEFINE_string(model_name, "", "Name of the Tensorflow model in `models/`.");
 DEFINE_string(proto_name, "", "Name of the index protobuf in `data/`.");
 
@@ -22,11 +22,11 @@ int main(int argc, char** argv) {
     FLAGS_alsologtostderr = true;
     FLAGS_colorlogtostderr = true;
 
-    CHECK(!FLAGS_map_path.empty());
+    CHECK(!FLAGS_map_name.empty());
     CHECK(!FLAGS_model_name.empty());
     CHECK(!FLAGS_proto_name.empty());
 
-    string map_path = FLAGS_map_path;
+    string map_path = string(MAP_ROOT_PATH) + FLAGS_map_name;
     string model_path = string(MODEL_ROOT_PATH) + FLAGS_model_name;
     string proto_path = string(DATA_ROOT_PATH) + FLAGS_proto_name;
 
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 
     global_loc::proto::DescriptorIndex proto_index;
     proto_index.set_model_name(FLAGS_model_name);
-    proto_index.set_data_name(FLAGS_map_path);
+    proto_index.set_data_name(FLAGS_map_name);
 
     PlaceRetrieval retrieval(model_path);
     retrieval.BuildIndexFromMap(map, &proto_index);

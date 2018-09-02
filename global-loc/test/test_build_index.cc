@@ -9,8 +9,7 @@
 using namespace std;
 
 int main () {
-    string map_path = string(MAP_ROOT_PATH)
-        + "lindenhof_afternoon-wet_aligned_deep-reloc_ext-int-3/";
+    string map_path = string(MAP_ROOT_PATH) + "lindenhof_afternoon-wet_aligned";
     string model_path = string(MODEL_ROOT_PATH) + "mobilenetvlad_depth-0.35";
 
     global_loc::proto::DescriptorIndex proto_index;

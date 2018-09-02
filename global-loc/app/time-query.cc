@@ -14,7 +14,7 @@
 
 using namespace std;
 
-DEFINE_string(map_path, "", "Path to the map.");
+DEFINE_string(map_name, "", "Name to the map in `maps/`.");
 DEFINE_string(model_name, "", "Name of the Tensorflow model in `models/`.");
 DEFINE_string(proto_name, "", "Name of the index protobuf in `data/`.");
 DEFINE_string(query_mission, "f6837cac0168580aa8a66be7bbb20805", "");
@@ -27,13 +27,13 @@ int main(int argc, char** argv) {
     FLAGS_alsologtostderr = true;
     FLAGS_colorlogtostderr = true;
 
-    CHECK(!FLAGS_map_path.empty());
+    CHECK(!FLAGS_map_name.empty());
     CHECK(!FLAGS_model_name.empty());
     CHECK(!FLAGS_proto_name.empty());
 
+    string query_map_path = string(MAP_ROOT_PATH) + FLAGS_map_name;
     string model_path = string(MODEL_ROOT_PATH) + FLAGS_model_name;
     string index_path = string(DATA_ROOT_PATH) + FLAGS_proto_name;
-    string query_map_path = FLAGS_map_path;
 
     PlaceRetrieval retrieval(model_path);
 
